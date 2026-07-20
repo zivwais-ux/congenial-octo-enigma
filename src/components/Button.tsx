@@ -6,8 +6,9 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { radius, spacing } from '@/theme';
+import { radius, shadow, spacing } from '@/theme';
 import { useTheme } from '@/theme/ThemeProvider';
 import { AppText } from './AppText';
 
@@ -26,7 +27,7 @@ interface Props {
   style?: ViewStyle;
 }
 
-const HEIGHTS: Record<Size, number> = { sm: 40, md: 50, lg: 56 };
+const HEIGHTS: Record<Size, number> = { sm: 40, md: 52, lg: 58 };
 
 export function Button({
   label,
@@ -43,7 +44,7 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const bg: Record<Variant, string> = {
-    primary: colors.brand,
+    primary: colors.brand, // fallback under the gradient fill
     secondary: colors.surfaceAlt,
     ghost: 'transparent',
     danger: colors.dangerSoft,
@@ -64,19 +65,29 @@ export function Button({
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.base,
+        variant === 'primary' && !isDisabled && shadow.brand,
         {
           height: HEIGHTS[size],
           backgroundColor: bg[variant],
           borderColor: variant === 'ghost' ? colors.brand : 'transparent',
           borderWidth: variant === 'ghost' ? 1.5 : 0,
-          opacity: isDisabled ? 0.55 : pressed ? 0.9 : 1,
-          transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
+          opacity: isDisabled ? 0.55 : pressed ? 0.92 : 1,
+          transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
           paddingHorizontal: fullWidth ? spacing.lg : spacing.xl,
         },
         style,
       ]}
     >
+      {variant === 'primary' && (
+        <LinearGradient
+          colors={[colors.gradientStart, colors.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      )}
       {loading ? (
         <ActivityIndicator color={fg[variant]} />
       ) : (
@@ -102,9 +113,10 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   content: {
     flexDirection: 'row',

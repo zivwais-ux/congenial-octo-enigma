@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { AppText, Button, Screen } from '@/components';
 import { radius, spacing, typography } from '@/theme';
@@ -73,7 +74,7 @@ export default function SignIn() {
   };
 
   return (
-    <Screen padded>
+    <Screen edges={['left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -83,17 +84,25 @@ export default function SignIn() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.hero}>
-            <View style={[styles.logo, { backgroundColor: colors.brand }]}>
+          <LinearGradient
+            colors={[colors.gradientStart, colors.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
+            <View style={styles.logo}>
               <Ionicons name="fast-food" size={34} color="#fff" />
             </View>
-            <AppText variant="display">Street Eats Asia</AppText>
-            <AppText variant="body" color="textMuted" center>
+            <AppText variant="display" style={styles.heroTitle}>
+              Street Eats Asia
+            </AppText>
+            <AppText variant="bodyStrong" center style={styles.heroTagline}>
               Real recommendations from travelers on the ground. Find the stall
               the guidebooks miss.
             </AppText>
-          </View>
+          </LinearGradient>
 
+          <View style={styles.body}>
           <View style={styles.form}>
             <Field
               icon="mail-outline"
@@ -175,6 +184,7 @@ export default function SignIn() {
               </Pressable>
             </Link>
           </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -206,12 +216,32 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingVertical: spacing.xxl, gap: spacing.xl, flexGrow: 1, justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: spacing.md },
+  content: { flexGrow: 1 },
+  hero: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingTop: spacing.huge + spacing.xl,
+    paddingBottom: spacing.xxxl + spacing.md,
+    paddingHorizontal: spacing.xxl,
+    borderBottomLeftRadius: radius.xl + 8,
+    borderBottomRightRadius: radius.xl + 8,
+  },
+  heroTitle: { color: '#fff', textAlign: 'center' },
+  heroTagline: { color: 'rgba(255,255,255,0.92)', maxWidth: 320 },
+  body: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    gap: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+  },
   logo: {
     width: 72,
     height: 72,
     borderRadius: radius.xl,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,

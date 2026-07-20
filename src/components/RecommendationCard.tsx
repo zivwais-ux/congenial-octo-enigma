@@ -39,7 +39,6 @@ export function RecommendationCard({
           shadow.card,
           {
             backgroundColor: colors.surface,
-            borderColor: colors.border,
             transform: [{ scale: pressed ? 0.99 : 1 }],
           },
         ]}
@@ -132,7 +131,6 @@ const styles = StyleSheet.create({
   cardWrap: { position: 'relative' },
   card: {
     borderRadius: radius.xl,
-    borderWidth: 1,
     overflow: 'hidden',
   },
   imageWrap: { position: 'relative' },

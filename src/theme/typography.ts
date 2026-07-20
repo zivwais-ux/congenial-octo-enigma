@@ -31,17 +31,17 @@ type Variant =
 export const typography: Record<Variant, TextStyle> = {
   display: {
     fontFamily: systemFontBold,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   title: {
     fontFamily: systemFontBold,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 27,
+    lineHeight: 33,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
   },
   heading: {
     fontFamily: systemFontBold,
