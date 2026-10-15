@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Bell, Check, CheckCheck, FileImage, MessageSquarePlus, Paperclip, PenLine, Send, Upload, type LucideIcon } from 'lucide-react';
+import { IconTile } from '../components/ui/IconTile';
+import type { Tone } from '../lib/status';
 import { useStore } from '../store/StoreProvider';
 import { createItem } from '../store/actions';
 import { saveFile } from '../store/fileStore';
@@ -27,6 +29,13 @@ function titleFromFile(name: string) {
     .replace(/[_-]+/g, ' ')
     .trim();
 }
+
+const FLOW: { icon: LucideIcon; tone: Tone; title: string; text: string }[] = [
+  { icon: Upload, tone: 'signal', title: 'מעלים קובץ', text: 'תצוגה, ואם רוצים גם מקור' },
+  { icon: Bell, tone: 'sky', title: 'התראה למאשר', text: 'מייל, Teams או וואטסאפ' },
+  { icon: MessageSquarePlus, tone: 'amber', title: 'הערות על הפיקסל', text: 'ישירות על העבודה' },
+  { icon: CheckCheck, tone: 'emerald', title: 'אישור וארכיון', text: 'כל הגרסאות במקום אחד' },
+];
 
 const DUE_PRESETS = [
   { label: 'מחר', days: 1 },
@@ -105,8 +114,23 @@ export function UploadPage() {
       <div className="mx-auto max-w-[56rem] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
         <PageHeader title="העלאת עבודה" subtitle="מעלים פעם אחת, והמאשר מקבל התראה. בלי מייל ובלי קובץ מצורף." />
 
+        <ol className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-stone-200/80 bg-stone-200/80 sm:grid-cols-2 xl:grid-cols-4">
+          {FLOW.map((f, i) => (
+            <li key={f.title} className="flex items-center gap-3 bg-white px-3.5 py-3 sm:px-4">
+              <IconTile icon={f.icon} tone={f.tone} size="md" />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-ink">
+                  <span className="num me-1.5 text-stone-400">{i + 1}</span>
+                  {f.title}
+                </div>
+                <div className="mt-0.5 truncate text-xs text-stone-500">{f.text}</div>
+              </div>
+            </li>
+          ))}
+        </ol>
+
         <div className="mt-8 divide-y divide-stone-200/80 border-t border-stone-200/80">
-          <Row title="קובץ לתצוגה" desc="מה שהמאשר יראה ויסמן עליו הערות. PNG, JPG או PDF.">
+          <Row icon={FileImage} tone="signal" title="קובץ לתצוגה" desc="מה שהמאשר יראה ויסמן עליו הערות. PNG, JPG או PDF.">
             <FileDrop
               file={preview}
               onChange={(f) => {
@@ -123,11 +147,11 @@ export function UploadPage() {
             {tried && !preview && <p className="mt-2 text-sm text-red-700">צריך לבחור קובץ לתצוגה</p>}
           </Row>
 
-          <Row title="קובץ מקור" desc="PSD, AI, INDD וכו׳. יישמר יחד עם העבודה, וכל הצוות יוכל להוריד אותו." optional>
+          <Row icon={Paperclip} tone="stone" title="קובץ מקור" desc="PSD, AI, INDD וכו׳. יישמר יחד עם העבודה, וכל הצוות יוכל להוריד אותו." optional>
             <FileDrop file={source} onChange={setSource} validate={validateSource} title="גוררים לכאן קובץ" hint="עד 150MB" compact testId="source-input" />
           </Row>
 
-          <Row title="פרטים">
+          <Row icon={PenLine} tone="sky" title="פרטים" desc="שם ברור עוזר למצוא את העבודה אחר כך בארכיון.">
             <div className="space-y-4">
               <Field label="שם העבודה" error={tried && !title.trim() ? 'חסר שם לעבודה' : undefined}>
                 <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: באנר ראשי לאתר – ראש השנה" className="input" data-testid="title-input" />
@@ -166,7 +190,7 @@ export function UploadPage() {
             </div>
           </Row>
 
-          <Row title="למי לשלוח" desc="ההתראה תגיע למאשר בערוץ שבו הוא עובד.">
+          <Row icon={Send} tone="violet" title="למי לשלוח" desc="ההתראה תגיע למאשר בערוץ שבו הוא עובד.">
             <div className="overflow-hidden rounded-lg border border-stone-200/80 bg-white" role="radiogroup">
               {approvers.map((a, i) => {
                 const selected = approverId === a.id;
@@ -224,10 +248,11 @@ export function UploadPage() {
   );
 }
 
-function Row({ title, desc, optional, children }: { title: string; desc?: string; optional?: boolean; children: ReactNode }) {
+function Row({ title, desc, optional, icon, tone, children }: { title: string; desc?: string; optional?: boolean; icon?: LucideIcon; tone?: Tone; children: ReactNode }) {
   return (
     <section className="grid gap-4 py-7 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10">
       <div>
+        {icon && <IconTile icon={icon} tone={tone} size="md" className="mb-3" />}
         <h2 className="text-base font-medium">
           {title}
           {optional && <span className="ms-1.5 text-sm font-normal text-stone-400">לא חובה</span>}

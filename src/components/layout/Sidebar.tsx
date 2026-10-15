@@ -45,18 +45,18 @@ export function Sidebar() {
 
       <nav className="mt-4 space-y-px px-3" aria-label="ניווט ראשי">
         <NavLink to="/" end className={() => item(pathname === '/' && !activeProject)}>
-          <Inbox className="h-4 w-4 text-stone-400" strokeWidth={1.75} />
+          <Inbox className="h-4 w-4 text-sky-600" strokeWidth={1.9} />
           <span className="flex-1">{isApprover ? 'תור האישורים' : 'העבודות שלי'}</span>
-          {myCount > 0 && <span className={`num text-xs font-medium ${isApprover ? 'text-ink' : 'text-amber-700'}`}>{myCount}</span>}
+          {myCount > 0 && <span className={`num rounded-full px-1.5 text-xs font-medium ${isApprover ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>{myCount}</span>}
         </NavLink>
         {!isApprover && (
           <NavLink to="/upload" className={({ isActive }) => item(isActive)}>
-            <Plus className="h-4 w-4 text-stone-400" strokeWidth={1.75} />
+            <Plus className="h-4 w-4 text-signal-600" strokeWidth={1.9} />
             <span className="flex-1">העלאת עבודה</span>
           </NavLink>
         )}
         <NavLink to="/archive" className={({ isActive }) => item(isActive)}>
-          <Archive className="h-4 w-4 text-stone-400" strokeWidth={1.75} />
+          <Archive className="h-4 w-4 text-emerald-600" strokeWidth={1.9} />
           <span className="flex-1">ארכיון</span>
           <span className="num text-xs text-stone-400">{archiveCount}</span>
         </NavLink>
@@ -69,11 +69,15 @@ export function Sidebar() {
             const open = state.items.filter((i) => i.projectId === p.id && (i.status === 'pending' || i.status === 'changes')).length;
             return (
               <NavLink key={p.id} to={`/?project=${p.id}`} className={() => item(activeProject === p.id)}>
-                <span className="flex w-4 justify-center">
-                  <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: p.color }} />
+                <span className="flex h-4 w-4 items-center justify-center rounded" style={{ backgroundColor: `${p.color}1f` }}>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: p.color }} />
                 </span>
                 <span className="flex-1 truncate">{p.name}</span>
-                {open > 0 && <span className="num text-xs text-stone-400">{open}</span>}
+                {open > 0 && (
+                  <span className="num rounded-full px-1.5 text-xs font-medium" style={{ backgroundColor: `${p.color}14`, color: p.color }}>
+                    {open}
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -82,12 +86,17 @@ export function Sidebar() {
 
       <div className="mt-auto space-y-2 border-t border-stone-200/80 p-3">
         <button onClick={() => setGuideOpen(true)} className={`${item(false)} w-full`} data-testid="open-guide">
-          <ListChecks className="h-4 w-4 text-stone-400" strokeWidth={1.75} />
+          <ListChecks className="h-4 w-4 text-violet-600" strokeWidth={1.9} />
           <span className="flex-1 text-start">תסריט ההדגמה</span>
           <span className="num text-xs text-stone-400">
             {done}/{steps.length}
           </span>
         </button>
+        <div className="-mt-1 flex gap-1 px-2 pb-1">
+          {steps.map((s) => (
+            <span key={s.key} className={`h-1 flex-1 rounded-full ${s.done ? 'bg-violet-500' : 'bg-stone-200'}`} />
+          ))}
+        </div>
         <UserSwitcher />
       </div>
     </aside>

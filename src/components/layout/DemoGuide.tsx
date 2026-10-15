@@ -1,11 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, RotateCcw, X } from 'lucide-react';
+import { Archive, ArrowLeft, Check, CheckCheck, Layers, MessageSquarePlus, RotateCcw, Upload, X } from 'lucide-react';
+import { IconTile } from '../ui/IconTile';
+import type { Tone } from '../../lib/status';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { useSwitchUser } from '../../hooks/useSwitchUser';
 import { tourSteps } from '../../lib/tour';
 import { Avatar } from '../ui/Avatar';
 import { useToast } from '../ui/Toast';
 import { useUI } from './UIContext';
+
+const STEP_ICON: Record<string, { icon: typeof Upload; tone: Tone }> = {
+  upload: { icon: Upload, tone: 'signal' },
+  changes: { icon: MessageSquarePlus, tone: 'amber' },
+  version: { icon: Layers, tone: 'violet' },
+  approve: { icon: CheckCheck, tone: 'emerald' },
+  archive: { icon: Archive, tone: 'teal' },
+};
 
 /** תסריט ההדגמה: חמשת הצעדים להצגה להנהלה, מתעדכן לבד תוך כדי */
 export function DemoGuide() {
@@ -42,8 +52,15 @@ export function DemoGuide() {
       >
         <div className="flex items-start gap-3 border-b border-stone-200/80 px-5 pb-4 pt-5">
           <div className="flex-1">
-            <div className="mono text-stone-400">
-              {doneCount}/{steps.length}
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 gap-1">
+                {steps.map((s) => (
+                  <span key={s.key} className={`h-1 flex-1 rounded-full ${s.done ? 'bg-emerald-500' : 'bg-stone-200'}`} />
+                ))}
+              </div>
+              <span className="mono text-stone-400">
+                {doneCount}/{steps.length}
+              </span>
             </div>
             <h2 className="mt-1 text-[16px] font-semibold">{allDone ? 'התסריט הושלם' : 'תסריט ההדגמה'}</h2>
             <p className="mt-1 text-sm text-stone-500">
@@ -61,15 +78,18 @@ export function DemoGuide() {
             const user = s.userId ? userById.get(s.userId) : undefined;
             return (
               <li key={s.key} className="flex gap-3 border-b border-stone-100 py-3.5 last:border-0">
-                <span
-                  className={`num mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
-                    s.done ? 'bg-ink text-white' : current ? 'border border-ink text-ink' : 'border border-stone-300 text-stone-400'
-                  }`}
-                >
-                  {s.done ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
-                </span>
+                {s.done ? (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                    <Check className="h-4 w-4" strokeWidth={2.5} />
+                  </span>
+                ) : (
+                  <IconTile icon={STEP_ICON[s.key].icon} tone={current ? STEP_ICON[s.key].tone : 'stone'} size="md" />
+                )}
                 <div className="min-w-0 flex-1">
-                  <div className={`text-sm font-medium ${s.done ? 'text-stone-400' : 'text-ink'}`}>{s.title}</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="num text-xs text-stone-400">{i + 1}</span>
+                    <span className={`text-sm font-medium ${s.done ? 'text-stone-400' : 'text-ink'}`}>{s.title}</span>
+                  </div>
                   {current && <p className="mt-1 text-sm text-stone-500">{s.text}</p>}
                   {current && (s.path || s.userId) && (
                     <button

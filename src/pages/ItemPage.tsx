@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Columns2, Download, Eye, EyeOff, Upload } from 'lucide-react';
+import { Activity, Check, Clock3, Columns2, Download, Eye, EyeOff, MessageSquare, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
+import { IconTile } from '../components/ui/IconTile';
+import { ProjectChip } from '../components/ui/ProjectChip';
+import type { Tone } from '../lib/status';
 import type { Item, Pin, User } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { addComment, decide, toggleResolved } from '../store/actions';
@@ -46,7 +49,7 @@ export function ItemPage() {
 
 function ItemView({ item }: { item: Item }) {
   const { state, update, currentUser } = useStore();
-  const { userById } = useLookups();
+  const { userById, projectById } = useLookups();
   const toast = useToast();
 
   const latest = item.versions[item.versions.length - 1];
@@ -123,6 +126,9 @@ function ItemView({ item }: { item: Item }) {
         <header className="border-b border-stone-200/80 bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
+              <div className="mb-1.5">
+                <ProjectChip project={projectById.get(item.projectId)} size="xs" />
+              </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <h1 className="text-[19px] font-semibold leading-7">{item.title}</h1>
                 <StatusBadge status={item.status} />
@@ -233,10 +239,12 @@ function ItemView({ item }: { item: Item }) {
 
         <div className="flex h-11 shrink-0 items-center gap-5 border-b border-stone-200/80 px-4" role="tablist">
           <TabBtn active={tab === 'comments'} onClick={() => setTab('comments')}>
+            <MessageSquare className="h-4 w-4 opacity-70" strokeWidth={1.9} />
             הערות
             {openCount > 0 && <span className="num text-xs text-signal-600">{openCount}</span>}
           </TabBtn>
           <TabBtn active={tab === 'timeline'} onClick={() => setTab('timeline')}>
+            <Activity className="h-4 w-4 opacity-70" strokeWidth={1.9} />
             פעילות
           </TabBtn>
           <span className="ms-auto text-xs text-stone-400">גרסה {version.number}</span>
@@ -311,11 +319,17 @@ function StatusNote({
   designerName: string;
   onNewVersion: () => void;
 }) {
-  const quote = lastDecisionText && <p className="mt-2 border-s-2 border-stone-200 ps-3 text-base leading-6 text-stone-700">{lastDecisionText}</p>;
+  const quote = lastDecisionText && <p className="mt-2.5 rounded-lg bg-white px-3 py-2 text-base leading-6 text-stone-700 ring-1 ring-inset ring-stone-200/80">{lastDecisionText}</p>;
+  const TONES: Record<string, { icon: LucideIcon; tone: Tone; bg: string }> = {
+    'bg-sky-600': { icon: Clock3, tone: 'sky', bg: 'bg-sky-50/50' },
+    'bg-amber-500': { icon: RotateCcw, tone: 'amber', bg: 'bg-amber-50/50' },
+    'bg-emerald-600': { icon: Check, tone: 'emerald', bg: 'bg-emerald-50/50' },
+    'bg-red-600': { icon: X, tone: 'red', bg: 'bg-red-50/40' },
+  };
   const wrap = (dot: string, title: string, children?: React.ReactNode, testId?: string) => (
-    <div className="border-b border-stone-200/80 px-4 py-4" data-testid={testId}>
-      <div className="flex items-center gap-2 text-sm font-medium text-ink">
-        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+    <div className={`border-b border-stone-200/80 px-4 py-4 ${TONES[dot].bg}`} data-testid={testId}>
+      <div className="flex items-center gap-2.5 text-sm font-medium text-ink">
+        <IconTile icon={TONES[dot].icon} tone={TONES[dot].tone} />
         {title}
       </div>
       {children}

@@ -10,7 +10,7 @@ export function MobileNav() {
     isApprover ? i.approverId === currentUser.id && i.status === 'pending' : i.designerId === currentUser.id && i.status === 'changes',
   ).length;
   const cls = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-2xs font-medium transition-colors ${isActive ? 'text-ink' : 'text-stone-400'}`;
+    `relative flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-2xs font-medium transition-colors ${isActive ? 'text-ink after:absolute after:top-0 after:h-0.5 after:w-8 after:rounded-full after:bg-signal-500' : 'text-stone-400'}`;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="ניווט">
       <div className="flex">

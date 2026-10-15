@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
+import { ProjectChip } from '../ui/ProjectChip';
 import type { Item } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { urgency } from '../../lib/dates';
@@ -34,16 +36,16 @@ export function ItemCard({ item, show = 'designer' }: { item: Item; show?: 'desi
           v{latest.number}
         </span>
         {openComments > 0 && (
-          <span className="num absolute end-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-500 px-1.5 text-[11px] font-medium text-white" title="הערות פתוחות">
+          <span className="num absolute end-2 top-2 flex h-5 items-center gap-1 rounded-full bg-signal-500 px-1.5 text-[11px] font-medium text-white shadow-xs" title="הערות פתוחות">
+            <MessageSquare className="h-3 w-3" strokeWidth={2.25} />
             {openComments}
           </span>
         )}
       </div>
       <div className="px-0.5 pt-2.5">
         <h3 className="truncate text-base font-medium leading-6 text-ink">{item.title}</h3>
-        <div className="mt-0.5 flex items-center gap-1.5 text-sm text-stone-500">
-          <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: project?.color }} />
-          <span className="truncate">{project?.name}</span>
+        <div className="mt-1.5 flex">
+          <ProjectChip project={project} size="xs" />
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <StatusBadge status={item.status} />

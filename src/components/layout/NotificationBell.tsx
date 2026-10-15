@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { AlarmClock, Bell, BellOff, Check, Layers, RotateCcw, Send, X, type LucideIcon } from 'lucide-react';
 import type { Notification } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { markAllRead, markRead } from '../../store/actions';
@@ -22,12 +22,21 @@ const KIND: Record<Notification['kind'], string> = {
 };
 
 const KIND_TONE: Record<Notification['kind'], string> = {
-  new: 'text-stone-500',
-  version: 'text-stone-500',
+  new: 'text-sky-700',
+  version: 'text-violet-700',
   changes: 'text-amber-700',
   approved: 'text-emerald-700',
   rejected: 'text-red-700',
   overdue: 'text-red-700',
+};
+
+const KIND_ICON: Record<Notification['kind'], { icon: LucideIcon; cls: string }> = {
+  new: { icon: Send, cls: 'bg-sky-500' },
+  version: { icon: Layers, cls: 'bg-violet-500' },
+  changes: { icon: RotateCcw, cls: 'bg-amber-500' },
+  approved: { icon: Check, cls: 'bg-emerald-600' },
+  rejected: { icon: X, cls: 'bg-red-600' },
+  overdue: { icon: AlarmClock, cls: 'bg-red-600' },
 };
 
 export function NotificationBell() {
@@ -89,7 +98,10 @@ export function NotificationBell() {
 
           <div className="scroll-thin flex-1 overflow-y-auto">
             {list.length === 0 ? (
-              <div className="px-6 py-12 text-center">
+              <div className="flex flex-col items-center px-6 py-12 text-center">
+                <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
+                  <BellOff className="h-5 w-5" strokeWidth={1.75} />
+                </span>
                 <div className="text-sm font-medium">{tab === 'unread' ? 'הכל נקרא' : 'אין התראות'}</div>
                 <div className="mt-1 text-xs text-stone-500">כשמשהו יחכה לך, הוא יופיע כאן.</div>
               </div>
@@ -110,7 +122,17 @@ export function NotificationBell() {
                     data-testid="notification"
                   >
                     {!n.read && <span className="absolute start-1.5 top-[22px] h-1.5 w-1.5 rounded-full bg-signal-500" />}
-                    {actor ? <Avatar user={actor} /> : <LogoMark size={28} />}
+                    <span className="relative shrink-0">
+                      {actor ? <Avatar user={actor} /> : <LogoMark size={28} />}
+                      {(() => {
+                        const K = KIND_ICON[n.kind];
+                        return (
+                          <span className={`absolute -bottom-1 -end-1 flex h-4 w-4 items-center justify-center rounded-full text-white ring-2 ring-white ${K.cls}`}>
+                            <K.icon className="h-2.5 w-2.5" strokeWidth={2.5} />
+                          </span>
+                        );
+                      })()}
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm leading-5 text-stone-600">
                         <span className="font-medium text-ink">{actor?.name ?? 'גדות סטודיו'}</span>

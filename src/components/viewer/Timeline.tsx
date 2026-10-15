@@ -1,4 +1,6 @@
+import { Check, Layers, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
 import type { Item, ItemEvent } from '../../types';
+import { IconTile } from '../ui/IconTile';
 import { useLookups } from '../../store/StoreProvider';
 import { formatDateTime } from '../../lib/dates';
 import { STATUS_META } from '../../lib/status';
@@ -16,10 +18,13 @@ function title(e: ItemEvent) {
   }
 }
 
-function dot(e: ItemEvent) {
-  if (e.type === 'decision' && e.status) return STATUS_META[e.status].dot;
-  if (e.type === 'comment') return 'bg-stone-300';
-  return 'bg-ink';
+function icon(e: ItemEvent) {
+  if (e.type === 'uploaded') return { icon: Send, tone: 'sky' as const };
+  if (e.type === 'version') return { icon: Layers, tone: 'violet' as const };
+  if (e.type === 'comment') return { icon: MessageSquare, tone: 'stone' as const };
+  if (e.status === 'approved') return { icon: Check, tone: 'emerald' as const };
+  if (e.status === 'rejected') return { icon: X, tone: 'red' as const };
+  return { icon: RotateCcw, tone: 'amber' as const };
 }
 
 /** יומן הפעילות של העבודה: מי עשה מה ומתי */
@@ -33,9 +38,9 @@ export function Timeline({ item }: { item: Item }) {
         const last = idx === events.length - 1;
         return (
           <li key={e.id} className="relative flex gap-3 pb-5 last:pb-0">
-            {!last && <span className="absolute bottom-0 start-[3.5px] top-4 w-px bg-stone-200" aria-hidden />}
-            <span className={`relative mt-[7px] h-2 w-2 shrink-0 rounded-full ring-4 ring-white ${dot(e)}`} />
-            <div className="min-w-0 flex-1">
+            {!last && <span className="absolute bottom-0 start-[11.5px] top-7 w-px bg-stone-200" aria-hidden />}
+            <IconTile {...icon(e)} className="relative rounded-full" />
+            <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
                 <span className="font-medium text-ink">{title(e)}</span>
                 <span className="text-stone-500">{author?.name}</span>

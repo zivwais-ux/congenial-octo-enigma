@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Download, Search, SearchX, X } from 'lucide-react';
+import { CheckCheck, ChevronDown, Download, FileArchive, FolderOpen, Layers, Search, SearchX, X } from 'lucide-react';
+import { IconTile } from '../components/ui/IconTile';
 import type { Item } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { decidedAt } from '../lib/items';
@@ -13,7 +14,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { FileThumb } from '../components/ui/FileThumb';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
-import { Metrics, Page, PageHeader } from './DashboardPage';
+import { Metrics, Page, PageHeader, type Metric } from './DashboardPage';
 
 const PERIODS = [
   { value: 'all', label: 'כל התאריכים', days: Infinity },
@@ -63,11 +64,11 @@ export function ArchivePage() {
   const groups = state.projects.map((p) => ({ project: p, items: filtered.filter((i) => i.projectId === p.id) })).filter((g) => g.items.length > 0);
   const designers = state.users.filter((u) => u.role === 'designer');
   const active = q || designerId !== 'all' || period !== 'all';
-  const stats = [
-    { label: 'עבודות מאושרות', value: approved.length },
-    { label: 'פרויקטים', value: new Set(approved.map((i) => i.projectId)).size },
-    { label: 'גרסאות שמורות', value: approved.reduce((n, i) => n + i.versions.length, 0) },
-    { label: 'קבצי מקור', value: approved.filter((i) => i.versions.some((v) => v.sourceFileName)).length },
+  const stats: Metric[] = [
+    { label: 'עבודות מאושרות', value: approved.length, icon: CheckCheck, tone: 'emerald' },
+    { label: 'פרויקטים', value: new Set(approved.map((i) => i.projectId)).size, icon: FolderOpen, tone: 'sky' },
+    { label: 'גרסאות שמורות', value: approved.reduce((n, i) => n + i.versions.length, 0), icon: Layers, tone: 'violet' },
+    { label: 'קבצי מקור', value: approved.filter((i) => i.versions.some((v) => v.sourceFileName)).length, icon: FileArchive, tone: 'amber' },
   ];
 
   return (
@@ -123,7 +124,7 @@ export function ArchivePage() {
       {active && <p className="-mt-2 text-sm text-stone-500">נמצאו {works(filtered.length)}</p>}
 
       {groups.length === 0 ? (
-        <EmptyState icon={<SearchX className="h-6 w-6" strokeWidth={1.5} />} title="לא נמצאו עבודות" text="נסו מילת חיפוש אחרת, או נקו את הסינון." />
+        <EmptyState icon={<IconTile icon={SearchX} size="lg" />} title="לא נמצאו עבודות" text="נסו מילת חיפוש אחרת, או נקו את הסינון." />
       ) : (
         <div className="space-y-10">
           {groups.map(({ project, items }) => {
@@ -135,7 +136,9 @@ export function ArchivePage() {
                   className="group mb-4 flex w-full items-center gap-2.5 border-b border-stone-200/80 pb-3 text-start"
                   aria-expanded={!isCollapsed}
                 >
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: project.color }} />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: `${project.color}17`, color: project.color }}>
+                    <FolderOpen className="h-4 w-4" strokeWidth={1.9} />
+                  </span>
                   <span className="text-base font-semibold text-ink">{project.name}</span>
                   <span className="num text-sm text-stone-400">{items.length}</span>
                   <span className="ms-auto flex -space-x-1.5 space-x-reverse">

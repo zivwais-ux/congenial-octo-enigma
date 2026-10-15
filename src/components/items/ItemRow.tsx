@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
+import { ProjectChip } from '../ui/ProjectChip';
 import type { Item } from '../../types';
 import { timeAgo } from '../../lib/dates';
 import { Avatar } from '../ui/Avatar';
@@ -21,18 +23,22 @@ export function ItemRow({ item, show = 'designer' }: { item: Item; show?: 'desig
     >
       {overdue && <span className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-red-600" />}
       <div className="flex min-w-0 items-center gap-3">
-        <FileThumb version={latest} className="h-10 w-[52px] shrink-0 rounded border border-stone-200 bg-stone-100/70 p-1" />
+        <FileThumb version={latest} className="h-11 w-14 shrink-0 rounded-md border border-stone-200 bg-stone-100/70 p-1" />
         <div className="min-w-0">
           <div className="truncate text-base font-medium text-ink">{item.title}</div>
           <div className="mt-0.5 flex items-center gap-2 text-sm text-stone-500">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: project?.color }} />
-              <span className="truncate">{project?.name}</span>
+            <span className="min-w-0">
+              <ProjectChip project={project} size="xs" />
             </span>
             <span className="mono text-stone-400" dir="ltr">
               v{latest.number}
             </span>
-            {openComments > 0 && <span className="num shrink-0 text-xs text-signal-600">{openComments === 1 ? 'הערה פתוחה' : `${openComments} הערות פתוחות`}</span>}
+            {openComments > 0 && (
+              <span className="num flex shrink-0 items-center gap-1 text-xs font-medium text-signal-600" title="הערות פתוחות">
+                <MessageSquare className="h-3.5 w-3.5" strokeWidth={2} />
+                {openComments}
+              </span>
+            )}
           </div>
         </div>
       </div>

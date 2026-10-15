@@ -47,12 +47,12 @@ export function TopBar() {
           ))}
         </nav>
         <div className="ms-auto flex items-center gap-0.5">
-          <span className="me-3 hidden items-center gap-1.5 text-xs text-stone-400 xl:flex">
+          <span className="me-3 hidden h-6 items-center gap-1.5 rounded-full bg-signal-50 px-2.5 text-xs text-signal-700 ring-1 ring-inset ring-signal-100 xl:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-signal-500" />
             סקיצה להדגמה · הנתונים נשמרים בדפדפן בלבד
           </span>
           <button onClick={() => setGuideOpen(true)} className={`${iconBtn} lg:hidden`} aria-label="תסריט ההדגמה">
-            <ListChecks className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            <ListChecks className="h-[18px] w-[18px] text-violet-600" strokeWidth={1.9} />
           </button>
           <button onClick={() => setPaletteOpen(true)} className={`${iconBtn} lg:hidden`} aria-label="חיפוש">
             <Search className="h-[18px] w-[18px]" strokeWidth={1.75} />
