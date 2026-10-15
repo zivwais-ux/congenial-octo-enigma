@@ -54,7 +54,7 @@ export function ItemCard({ item, show = 'designer' }: { item: Item; show?: 'desi
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
               <Avatar user={person} size="xs" />
               <span className="truncate">
-                {show === 'approver' ? 'מאשר/ת: ' : ''}
+                {show === 'approver' ? 'אצל ' : ''}
                 {person.name}
               </span>
             </span>

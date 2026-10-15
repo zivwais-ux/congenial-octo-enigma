@@ -51,7 +51,7 @@ export function UserSwitcher() {
         <Avatar user={currentUser} />
         <span className="hidden leading-tight sm:block">
           <span className="block text-sm font-semibold text-slate-900">{currentUser.name}</span>
-          <span className="block text-[11px] text-slate-500">{currentUser.role === 'approver' ? 'מאשר/ת' : 'מעצב/ת'}</span>
+          <span className="block text-[11px] text-slate-500">{currentUser.title}</span>
         </span>
         <ChevronDown className="h-4 w-4 text-slate-400" />
       </button>
