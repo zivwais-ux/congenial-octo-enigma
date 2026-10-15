@@ -1,7 +1,11 @@
 import type { AppState, Comment, Item, ItemEvent, Notification, Pin, Project, Status, User, Version } from '../types';
 import { placeholderDataUrl, type PlaceholderSpec } from './placeholders';
+import { USER_CHANNEL } from '../lib/status';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+/** מזהי עבודות הדמה – כל עבודה אחרת נוצרה במהלך ההדגמה */
+export const SEED_ITEM_IDS = new Set(['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12']);
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -355,22 +359,23 @@ export function createSeed(): AppState {
   }
 
   // התראות קיימות, כדי שהפעמון לא יהיה ריק בתחילת הדמו
-  const n = (id: string, userId: string, text: string, itemId: string, hoursAgo: number, channel: Notification['channel'], read = false) =>
-    notifications.push({ id, userId, text, itemId, read, channel, createdAt: new Date(now - hoursAgo * HOUR).toISOString() });
+  const n = (id: string, userId: string, kind: Notification['kind'], actorId: string | undefined, text: string, itemId: string, hoursAgo: number, read = false) =>
+    notifications.push({ id, userId, kind, actorId, text, itemId, read, channel: USER_CHANNEL[userId], createdAt: new Date(now - hoursAgo * HOUR).toISOString() });
 
-  n('n1', 'u1', '"רולאפ כניסה לביתן" ממתין לאישורך · דדליין היום', 'i8', 3, 'Teams');
-  n('n2', 'u1', 'גרסה 2 של "באנר ראשי לאתר – ראש השנה" הועלתה ע״י נועה לוי', 'i1', 20, 'מייל');
-  n('n3', 'u1', '"באנר לינקדאין – השקת גדות פרו" ממתין לאישורך · נשלח ע״י דניאל ביטון', 'i12', 22, 'וואטסאפ');
-  n('n4', 'u1', 'גרסה 2 של "פלייר לחלוקה בתערוכה" הועלתה ע״י שירה פרץ', 'i10', 50, 'מייל', true);
-  n('n5', 'u2', '"קטלוג 2027 – עמוד שער" ממתין לאישורך · נשלח ע״י נועה לוי', 'i4', 90, 'Teams');
-  n('n6', 'u2', 'הדדליין של "קטלוג 2027 – עמוד שער" עבר', 'i4', 10, 'וואטסאפ');
-  n('n7', 'u4', 'נדרשים תיקונים ב"פוסט אינסטגרם – ברכת שנה טובה" · ע״י מיכל אברהם', 'i2', 30, 'וואטסאפ');
-  n('n8', 'u5', '"סט אייקונים לתכונות מוצר" נדחה ע״י מיכל אברהם', 'i7', 40, 'מייל');
-  n('n9', 'u6', 'נדרשים תיקונים ב"קטלוג 2027 – כפולת מוצרי ניקוי" · ע״י יוסי כהן', 'i5', 34, 'Teams');
-  n('n10', 'u3', '"שלט דוכן ראשי" אושר ע״י יוסי כהן', 'i9', 100, 'מייל', true);
+  n('n1', 'u1', 'new', 'u6', 'יוצא לדפוס היום, חשוב לאשר עד הצהריים', 'i8', 3);
+  n('n2', 'u1', 'version', 'u3', 'הכותרת הוגדלה וה-CTA הוחלף לכהה', 'i1', 20);
+  n('n3', 'u1', 'new', 'u6', '', 'i12', 22);
+  n('n4', 'u1', 'version', 'u5', '', 'i10', 50, true);
+  n('n5', 'u2', 'new', 'u3', '', 'i4', 90);
+  n('n6', 'u2', 'overdue', undefined, 'העבודה עדיין מחכה להחלטה שלך', 'i4', 10);
+  n('n7', 'u4', 'changes', 'u1', 'שתי הערות על התמונה', 'i2', 30);
+  n('n8', 'u5', 'rejected', 'u1', 'צריך קונספט חדש לאייקונים', 'i7', 40);
+  n('n9', 'u6', 'changes', 'u2', 'חסר מחיר מומלץ וכותרת לא נכונה', 'i5', 34);
+  n('n10', 'u3', 'approved', 'u2', 'הקבצים נשמרו בארכיון', 'i9', 100, true);
 
   return {
     schema: SCHEMA_VERSION,
+    tour: { archiveSeen: false },
     currentUserId: 'u1',
     users,
     projects,

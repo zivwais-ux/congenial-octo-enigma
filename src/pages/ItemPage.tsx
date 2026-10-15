@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Columns2, Download, Upload, Wrench, XCircle } from 'lucide-react';
-import type { Item, Pin, Status } from '../types';
+import { CheckCircle2, Clock3, Columns2, Download, Eye, EyeOff, FileQuestion, Layers, Upload, Wrench, XCircle } from 'lucide-react';
+import type { Item, Pin, User } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { addComment, decide, toggleResolved } from '../store/actions';
 import { useToast } from '../components/ui/Toast';
 import { Avatar } from '../components/ui/Avatar';
+import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { DueLabel } from '../components/ui/DueLabel';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PreviewPane, type NumberedPin } from '../components/viewer/PreviewPane';
 import { CommentPanel } from '../components/viewer/CommentPanel';
 import { Timeline } from '../components/viewer/Timeline';
-import { DecisionBar } from '../components/viewer/DecisionBar';
+import { DecisionPanel, type Decision } from '../components/viewer/DecisionPanel';
 import { VersionTabs } from '../components/viewer/VersionTabs';
 import { CompareView } from '../components/viewer/CompareView';
 import { NewVersionModal } from '../components/upload/NewVersionModal';
 import { downloadSource } from '../lib/download';
-import { USER_CHANNEL } from '../lib/status';
-import { formatDateTime } from '../lib/dates';
+import { channelOf } from '../lib/status';
+import { formatDate, formatDateTime } from '../lib/dates';
+import { firstName } from '../lib/copy';
 
 export function ItemPage() {
   const { id } = useParams();
@@ -25,12 +28,17 @@ export function ItemPage() {
   const item = state.items.find((i) => i.id === id);
   if (!item) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <h1 className="text-xl font-bold text-slate-900">העבודה לא נמצאה</h1>
-        <p className="mt-2 text-sm text-slate-500">ייתכן שהדמו אופס.</p>
-        <Link to="/" className="mt-6 inline-block text-sm font-medium text-brand-600 hover:underline">
-          חזרה לדשבורד
-        </Link>
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <EmptyState
+          icon={<FileQuestion className="h-6 w-6" />}
+          title="העבודה לא נמצאה"
+          text="ייתכן שההדגמה אופסה מאז שנפתח הקישור."
+          action={
+            <Link to="/" className="inline-flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white">
+              חזרה לסקירה
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -47,6 +55,7 @@ function ItemView({ item }: { item: Item }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [tab, setTab] = useState<'comments' | 'timeline'>('comments');
   const [showResolved, setShowResolved] = useState(false);
+  const [showPins, setShowPins] = useState(true);
   const [compare, setCompare] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -57,7 +66,7 @@ function ItemView({ item }: { item: Item }) {
     setCompare(false);
   }, [latest.id]);
 
-  // פתיחת הפריט מסמנת את ההתראות שלו כנקראו
+  // פתיחת העבודה מסמנת את ההתראות שלה כנקראו
   useEffect(() => {
     update((s) =>
       s.notifications.some((n) => n.userId === currentUser.id && n.itemId === item.id && !n.read)
@@ -79,6 +88,7 @@ function ItemView({ item }: { item: Item }) {
   const pinned: NumberedPin[] = versionComments.filter((c) => c.pin).map((comment, i) => ({ comment, number: i + 1 }));
   const general = versionComments.filter((c) => !c.pin);
   const openPins = pinned.filter((p) => !p.comment.resolved).length;
+  const openCount = versionComments.filter((c) => !c.resolved).length;
   const olderCount = itemComments.filter((c) => c.versionId !== version.id).length;
 
   const isApprover = currentUser.id === item.approverId;
@@ -90,144 +100,152 @@ function ItemView({ item }: { item: Item }) {
 
   const onAddPin = (pin: Pin, text: string) => {
     update((s) => addComment(s, item.id, version.id, text, pin));
+    setShowPins(true);
   };
 
-  const onDecide = (d: Exclude<Status, 'pending'>, text: string) => {
+  const onDecide = (d: Decision, text: string) => {
     update((s) => decide(s, item.id, d, text));
-    const msg = { approved: `העבודה אושרה. נשלחה התראה ל${designer.name}`, changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: `העבודה נדחתה. נשלחה התראה ל${designer.name}` }[d];
-    toast(`${msg} · ${USER_CHANNEL[designer.id] ?? 'מייל'}`);
+    const msg = { approved: 'העבודה אושרה ועברה לארכיון', changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: 'העבודה נדחתה' }[d];
+    toast(msg, { channel: channelOf(designer.id) });
   };
 
   const selectFromList = (id: string | null) => {
     setActiveId(id);
+    setShowPins(true);
     if (id && window.innerWidth < 1024) previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <div className={`mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6 ${canDecide ? 'pb-28 lg:pb-6' : ''}`}>
+    <div className={`anim-rise mx-auto max-w-[100rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-6 ${canDecide ? 'pb-32 lg:pb-6' : ''}`}>
       {/* כותרת */}
-      <div className="mb-4 flex flex-col gap-3 sm:mb-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <Link to="/" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
-            <ArrowRight className="h-4 w-4" />
-            חזרה
-          </Link>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{item.title}</h1>
+          <div className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 lg:hidden">
+            <span className="h-2 w-2 rounded-[3px]" style={{ backgroundColor: project?.color }} />
+            {project?.name}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 lg:mt-0">
+            <h1 className="text-[22px] font-extrabold tracking-tight text-zinc-900 sm:text-2xl">{item.title}</h1>
             <StatusBadge status={item.status} size="md" />
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: project?.color }} />
-              {project?.name}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Avatar user={designer} size="xs" />
-              {designer.name}
-              <span className="text-slate-300">←</span>
-              <Avatar user={approver} size="xs" />
-              {approver.name}
-            </span>
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-zinc-500">
+            <Person label="עיצוב" user={designer} />
+            <Person label="אישור" user={approver} />
             <DueLabel dueDate={item.dueDate} status={item.status} />
+            <span className="flex items-center gap-1">
+              <Layers className="h-3.5 w-3.5" />
+              {item.versions.length === 1 ? 'גרסה אחת' : `${item.versions.length} גרסאות`}
+            </span>
           </div>
         </div>
         {sourceVersion && (
-          <button
+          <Button
+            variant="secondary"
+            className="self-start lg:self-auto"
+            icon={<Download className="h-4 w-4" />}
             onClick={() => {
               void downloadSource(sourceVersion);
-              toast(`מוריד את ${sourceVersion.sourceFileName}`, 'info');
+              toast(`ההורדה של ${sourceVersion.sourceFileName} התחילה`, { tone: 'info' });
             }}
-            className="flex items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 lg:self-auto"
             data-testid="download-source"
           >
-            <Download className="h-4 w-4" />
-            <span className="max-w-[16rem] truncate" dir="ltr">
+            <span className="max-w-[14rem] truncate" dir="ltr">
               {sourceVersion.sourceFileName}
             </span>
-            {sourceVersion.id !== version.id && <span className="text-xs text-slate-400">(מגרסה {sourceVersion.number})</span>}
-          </button>
+            {sourceVersion.id !== version.id && <span className="text-xs font-normal text-zinc-400">מגרסה {sourceVersion.number}</span>}
+          </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-        {/* תצוגה מקדימה */}
-        <div ref={previewRef} className="min-w-0 scroll-mt-20 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {compare ? (
-              <span className="text-sm font-semibold text-slate-700">השוואת גרסאות</span>
-            ) : (
-              <VersionTabs
-                versions={item.versions}
-                value={version.id}
-                onChange={(v) => {
-                  setViewId(v);
-                  setActiveId(null);
-                }}
-              />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
+        {/* במה */}
+        <div ref={previewRef} className="min-w-0 scroll-mt-20">
+          <div className="overflow-hidden rounded-2xl bg-stage shadow-lift ring-1 ring-zinc-900/10">
+            {!compare && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-stage-line bg-stage-deep px-3 py-2.5">
+                <VersionTabs
+                  versions={item.versions}
+                  value={version.id}
+                  onChange={(v) => {
+                    setViewId(v);
+                    setActiveId(null);
+                  }}
+                />
+                {!isLatest && <span className="rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-semibold text-amber-300">גרסה קודמת · לצפייה בלבד</span>}
+                <div className="ms-auto flex items-center gap-1">
+                  {pinned.length > 0 && (
+                    <StageBtn onClick={() => setShowPins((v) => !v)} active={!showPins} label={showPins ? 'הסתרת סימונים' : 'הצגת סימונים'}>
+                      {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </StageBtn>
+                  )}
+                  {item.versions.length > 1 && (
+                    <StageBtn onClick={() => setCompare(true)} label="השוואת גרסאות" wide testId="compare-toggle">
+                      <Columns2 className="h-4 w-4" />
+                      השוואה
+                    </StageBtn>
+                  )}
+                </div>
+              </div>
             )}
-            <div className="flex items-center gap-2">
-              {!isLatest && !compare && (
-                <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">צופים בגרסה ישנה</span>
-              )}
-              {item.versions.length > 1 && (
-                <button
-                  onClick={() => setCompare((c) => !c)}
-                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition ${
-                    compare ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                  data-testid="compare-toggle"
-                >
-                  <Columns2 className="h-4 w-4" />
-                  {compare ? 'סגירת השוואה' : 'השוואה'}
-                </button>
-              )}
-            </div>
-          </div>
-          {compare ? (
-            <CompareView item={item} comments={itemComments} />
-          ) : (
-            <>
+            {compare ? (
+              <div>
+                <div className="flex items-center justify-between border-b border-stage-line bg-stage-deep px-3 py-2">
+                  <span className="text-[13px] font-semibold text-zinc-100">השוואת גרסאות</span>
+                  <StageBtn onClick={() => setCompare(false)} label="חזרה לתצוגה רגילה" wide testId="compare-toggle">
+                    סגירת השוואה
+                  </StageBtn>
+                </div>
+                <CompareView item={item} comments={itemComments} />
+              </div>
+            ) : (
               <PreviewPane
                 version={version}
-                pins={pinned}
+                pins={showPins ? pinned : []}
                 activeId={activeId}
                 onSelect={setActiveId}
                 onAddPin={canPin ? onAddPin : undefined}
                 showResolved={showResolved}
               />
-              {version.note && (
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-                  <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-                    <Avatar user={designer} size="xs" />
-                    {designer.name} · הערה לגרסה {version.number} · {formatDateTime(version.uploadedAt)}
-                  </div>
-                  <p className="text-slate-700">{version.note}</p>
+            )}
+          </div>
+
+          {!compare && version.note && (
+            <div className="mt-3 flex gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+              <Avatar user={designer} size="sm" ring={false} />
+              <div className="min-w-0 text-sm">
+                <div className="text-xs text-zinc-500">
+                  <span className="font-semibold text-zinc-800">{designer.name}</span> · הערה לגרסה {version.number} · {formatDateTime(version.uploadedAt)}
                 </div>
-              )}
-            </>
+                <p className="mt-0.5 leading-relaxed text-zinc-700">{version.note}</p>
+              </div>
+            </div>
           )}
         </div>
 
         {/* פאנל צד */}
-        <aside className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)]">
-          {canDecide && <DecisionBar onDecide={onDecide} openPinCount={openPins} designerName={designer.name} />}
+        <aside className="flex min-h-[460px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-card lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-10.75rem)] lg:min-h-[520px]">
+          {canDecide && <DecisionPanel onDecide={onDecide} openPinCount={openPins} designerName={designer.name} itemTitle={item.title} versionNumber={latest.number} />}
           <StatusBanner
             item={item}
             isDesigner={isDesigner}
             isApprover={isApprover}
             lastDecisionText={lastDecision?.text}
+            lastDecisionAt={lastDecision?.at}
             approverName={approver.name}
+            designerName={designer.name}
             onNewVersion={() => setNewVersionOpen(true)}
           />
 
-          <div className="flex border-b border-slate-200 px-2" role="tablist">
+          <div className="flex gap-1 border-b border-zinc-200 px-3" role="tablist">
             <TabBtn active={tab === 'comments'} onClick={() => setTab('comments')}>
               הערות
-              <span className="rounded-full bg-slate-100 px-1.5 text-[11px] text-slate-600">{versionComments.filter((c) => !c.resolved).length}</span>
+              {openCount > 0 && <span className="rounded-full bg-rose-50 px-1.5 text-[11px] font-bold text-rose-600">{openCount}</span>}
             </TabBtn>
             <TabBtn active={tab === 'timeline'} onClick={() => setTab('timeline')}>
-              ציר זמן
+              פעילות
+              <span className="text-[11px] text-zinc-400">{item.events.length}</span>
             </TabBtn>
+            <span className="ms-auto self-center text-[11px] text-zinc-400">גרסה {version.number}</span>
           </div>
 
           {tab === 'comments' ? (
@@ -244,7 +262,7 @@ function ItemView({ item }: { item: Item }) {
               canPin={canPin}
             />
           ) : (
-            <div className="flex-1 overflow-y-auto">
+            <div className="scroll-thin flex-1 overflow-y-auto">
               <Timeline item={item} />
             </div>
           )}
@@ -255,14 +273,40 @@ function ItemView({ item }: { item: Item }) {
   );
 }
 
+function Person({ label, user }: { label: string; user: User }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="text-zinc-400">{label}</span>
+      <Avatar user={user} size="xs" ring={false} />
+      <span className="font-medium text-zinc-700">{user.name}</span>
+    </span>
+  );
+}
+
+function StageBtn({ onClick, label, active, wide, testId, children }: { onClick: () => void; label: string; active?: boolean; wide?: boolean; testId?: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      data-testid={testId}
+      className={`flex h-8 items-center justify-center gap-1.5 rounded-md text-[13px] font-semibold transition ${wide ? 'px-2.5' : 'w-8'} ${
+        active ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10 hover:text-white'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium ${
-        active ? 'border-brand-600 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'
+      className={`-mb-px flex items-center gap-1.5 border-b-2 px-2 py-3 text-sm font-semibold transition ${
+        active ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-800'
       }`}
     >
       {children}
@@ -275,63 +319,70 @@ function StatusBanner({
   isDesigner,
   isApprover,
   lastDecisionText,
+  lastDecisionAt,
   approverName,
+  designerName,
   onNewVersion,
 }: {
   item: Item;
   isDesigner: boolean;
   isApprover: boolean;
   lastDecisionText?: string;
+  lastDecisionAt?: string;
   approverName: string;
+  designerName: string;
   onNewVersion: () => void;
 }) {
+  const quote = lastDecisionText && <p className="mt-1.5 text-[13px] leading-relaxed opacity-90">"{lastDecisionText}"</p>;
   if (item.status === 'pending') {
     if (isApprover) return null;
     return (
-      <div className="border-b border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-        ממתין להחלטה של {approverName}
-      </div>
+      <Banner tone="border-sky-100 bg-sky-50 text-sky-900" icon={<Clock3 className="h-4 w-4 text-sky-600" />} title={`ממתין להחלטה של ${approverName}`}>
+        <p className="mt-1 text-[13px] text-sky-800/80">{isDesigner ? 'ברגע שתהיה החלטה, תגיע אליך התראה.' : `גרסה ${item.versions.length} נשלחה לאישור.`}</p>
+      </Banner>
     );
   }
   if (item.status === 'changes') {
     return (
-      <div className="border-b border-amber-200 bg-amber-50 px-4 py-3" data-testid="changes-banner">
-        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-          <Wrench className="h-4 w-4" />
-          נדרשים תיקונים · {approverName}
-        </div>
-        {lastDecisionText && <p className="mt-1 text-sm text-amber-900/80">"{lastDecisionText}"</p>}
+      <Banner tone="border-amber-200 bg-amber-50 text-amber-950" icon={<Wrench className="h-4 w-4 text-amber-600" />} title={isDesigner ? `התקבלו הערות מ${approverName}` : `הוחזר ל${firstName(designerName)} לתיקונים`} testId="changes-banner">
+        {quote}
         {isDesigner && (
-          <button
-            onClick={onNewVersion}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
-            data-testid="upload-version-btn"
-          >
-            <Upload className="h-4 w-4" />
-            העלה גרסה חדשה
-          </button>
+          <Button variant="primary" block className="mt-3" icon={<Upload className="h-4 w-4" />} onClick={onNewVersion} data-testid="upload-version-btn">
+            העלאת גרסה {item.versions.length + 1}
+          </Button>
         )}
-      </div>
+      </Banner>
     );
   }
   if (item.status === 'approved') {
     return (
-      <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        <div className="flex items-center gap-2 font-semibold">
-          <CheckCircle2 className="h-4 w-4" />
-          אושר ע״י {approverName} · נשמר בארכיון
-        </div>
-        {lastDecisionText && <p className="mt-1 text-emerald-800/80">"{lastDecisionText}"</p>}
-      </div>
+      <Banner
+        tone="border-emerald-100 bg-emerald-50 text-emerald-950"
+        icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+        title={`אושר${lastDecisionAt ? ` ב-${formatDate(lastDecisionAt)}` : ''} · ${approverName}`}
+      >
+        {quote}
+        <Link to="/archive" className="mt-2 inline-block text-[13px] font-semibold text-emerald-700 hover:underline">
+          נשמר בארכיון עם כל הגרסאות ←
+        </Link>
+      </Banner>
     );
   }
   return (
-    <div className="border-b border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-      <div className="flex items-center gap-2 font-semibold">
-        <XCircle className="h-4 w-4" />
-        נדחה ע״י {approverName}
+    <Banner tone="border-rose-100 bg-rose-50 text-rose-950" icon={<XCircle className="h-4 w-4 text-rose-600" />} title={`נדחה · ${approverName}`}>
+      {quote}
+    </Banner>
+  );
+}
+
+function Banner({ tone, icon, title, children, testId }: { tone: string; icon: React.ReactNode; title: string; children?: React.ReactNode; testId?: string }) {
+  return (
+    <div className={`border-b px-4 py-3.5 ${tone}`} data-testid={testId}>
+      <div className="flex items-center gap-2 text-sm font-bold">
+        {icon}
+        {title}
       </div>
-      {lastDecisionText && <p className="mt-1 text-rose-800/80">"{lastDecisionText}"</p>}
+      {children}
     </div>
   );
 }

@@ -1,39 +1,46 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { CheckCircle2, Info } from 'lucide-react';
+import type { Channel } from '../../types';
+import { ChannelTag } from './ChannelTag';
 
 interface Toast {
   id: number;
   text: string;
   tone: 'success' | 'info';
+  channel?: Channel;
 }
 
-const ToastContext = createContext<(text: string, tone?: Toast['tone']) => void>(() => {});
+type Push = (text: string, opts?: { tone?: Toast['tone']; channel?: Channel }) => void;
+
+const ToastContext = createContext<Push>(() => {});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const push = useCallback((text: string, tone: Toast['tone'] = 'success') => {
+  const push = useCallback<Push>((text, opts = {}) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t.slice(-2), { id, text, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
+    setToasts((t) => [...t.slice(-2), { id, text, tone: opts.tone ?? 'success', channel: opts.channel }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4200);
   }, []);
 
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6">
+      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[80] flex flex-col items-center gap-2 px-4 lg:bottom-6">
         {toasts.map((t) => (
           <div
             key={t.id}
             role="status"
-            className="toast-in pointer-events-auto flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-lg"
+            className="anim-rise pointer-events-auto flex max-w-md items-center gap-3 rounded-xl bg-zinc-900 py-2.5 pe-3 ps-3.5 text-sm text-white shadow-pop ring-1 ring-white/10"
           >
-            {t.tone === 'success' ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-            ) : (
-              <Info className="h-4 w-4 shrink-0 text-sky-300" />
+            {t.tone === 'success' ? <CheckCircle2 className="h-[18px] w-[18px] shrink-0 text-emerald-400" /> : <Info className="h-[18px] w-[18px] shrink-0 text-brand-300" />}
+            <span className="font-medium">{t.text}</span>
+            {t.channel && (
+              <span className="flex shrink-0 items-center gap-1.5 border-s border-white/15 ps-3 text-xs text-zinc-400">
+                התראה ב-
+                <ChannelTag channel={t.channel} dark />
+              </span>
             )}
-            {t.text}
           </div>
         ))}
       </div>

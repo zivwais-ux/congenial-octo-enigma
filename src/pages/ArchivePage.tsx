@@ -1,29 +1,39 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, ChevronDown, Download, Folder, Layers, Search, X } from 'lucide-react';
+import { ChevronDown, Download, FolderOpen, Layers, SearchX } from 'lucide-react';
 import type { Item } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { decidedAt } from '../lib/items';
 import { formatDate } from '../lib/dates';
 import { downloadSource } from '../lib/download';
+import { demoItem } from '../lib/tour';
+import { works } from '../lib/copy';
 import { useToast } from '../components/ui/Toast';
 import { Avatar } from '../components/ui/Avatar';
 import { FileThumb } from '../components/ui/FileThumb';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Search, X } from 'lucide-react';
 
 const PERIODS = [
-  { value: 'all', label: 'כל הזמנים', days: Infinity },
-  { value: '7', label: '7 הימים האחרונים', days: 7 },
-  { value: '30', label: '30 הימים האחרונים', days: 30 },
-  { value: '90', label: '3 החודשים האחרונים', days: 90 },
+  { value: 'all', label: 'מכל הזמנים', days: Infinity },
+  { value: '7', label: 'בשבוע האחרון', days: 7 },
+  { value: '30', label: 'ב-30 הימים האחרונים', days: 30 },
+  { value: '90', label: 'ב-3 החודשים האחרונים', days: 90 },
 ];
 
 export function ArchivePage() {
-  const { state } = useStore();
+  const { state, update } = useStore();
   const lookups = useLookups();
   const [q, setQ] = useState('');
   const [designerId, setDesignerId] = useState('all');
   const [period, setPeriod] = useState('all');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // צעד 5 במדריך ההדגמה
+  const demo = demoItem(state);
+  useEffect(() => {
+    if (demo?.status === 'approved' && !state.tour.archiveSeen) update((s) => ({ ...s, tour: { ...s.tour, archiveSeen: true } }));
+  }, [demo?.status, state.tour.archiveSeen, update]);
 
   const approved = useMemo(() => state.items.filter((i) => i.status === 'approved'), [state.items]);
 
@@ -40,6 +50,7 @@ export function ArchivePage() {
           i.title,
           lookups.projectById.get(i.projectId)?.name,
           lookups.userById.get(i.designerId)?.name,
+          lookups.userById.get(i.approverId)?.name,
           formatDate(decidedAt(i)),
           ...i.versions.map((v) => v.sourceFileName ?? ''),
         ].join(' ');
@@ -48,41 +59,47 @@ export function ArchivePage() {
       .sort((a, b) => decidedAt(b).localeCompare(decidedAt(a)));
   }, [approved, q, designerId, period, lookups]);
 
-  const groups = state.projects
-    .map((p) => ({ project: p, items: filtered.filter((i) => i.projectId === p.id) }))
-    .filter((g) => g.items.length > 0);
-
+  const groups = state.projects.map((p) => ({ project: p, items: filtered.filter((i) => i.projectId === p.id) })).filter((g) => g.items.length > 0);
   const designers = state.users.filter((u) => u.role === 'designer');
   const active = q || designerId !== 'all' || period !== 'all';
-  const projectsWithApproved = new Set(approved.map((i) => i.projectId)).size;
-  const versionsCount = approved.reduce((n, i) => n + i.versions.length, 0);
+  const stats = [
+    { label: 'עבודות מאושרות', value: approved.length },
+    { label: 'פרויקטים', value: new Set(approved.map((i) => i.projectId)).size },
+    { label: 'גרסאות שמורות', value: approved.reduce((n, i) => n + i.versions.length, 0) },
+    { label: 'קבצי מקור', value: approved.filter((i) => i.versions.some((v) => v.sourceFileName)).length },
+  ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-          <Archive className="h-6 w-6 text-slate-400" />
-          ארכיון עבודות מאושרות
-        </h1>
-        <p className="text-sm text-slate-500">
-          {approved.length} עבודות מאושרות ב-{projectsWithApproved} פרויקטים, עם {versionsCount} גרסאות וקבצי המקור. מקום אחד, בלי לחפש בתיקיות.
-        </p>
+    <div className="anim-rise mx-auto max-w-[88rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-[26px] font-extrabold tracking-tight text-zinc-900 sm:text-3xl">ארכיון</h1>
+          <p className="mt-1.5 max-w-xl text-[15px] text-zinc-500">כל עבודה שאושרה, עם כל הגרסאות וקובץ המקור. בלי תיקיות על מחשבים אישיים, ובלי לשאול "איפה הקובץ הסופי?".</p>
+        </div>
+        <dl className="grid grid-cols-4 divide-x divide-x-reverse divide-zinc-200 rounded-xl border border-zinc-200 bg-white shadow-card">
+          {stats.map((s) => (
+            <div key={s.label} className="px-3 py-2.5 text-center sm:px-5">
+              <dt className="text-[11px] leading-tight text-zinc-500">{s.label}</dt>
+              <dd className="mt-0.5 text-lg font-bold text-zinc-900">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="חיפוש לפי שם, פרויקט, מעצב, תאריך או שם קובץ"
-            className="w-full rounded-lg border border-slate-200 py-2 pe-3 ps-9 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className="input h-10 py-0 ps-9"
             data-testid="archive-search"
           />
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <select value={designerId} onChange={(e) => setDesignerId(e.target.value)} className={selectCls} aria-label="מעצב">
+          <select value={designerId} onChange={(e) => setDesignerId(e.target.value)} className="input h-10 w-auto py-0" aria-label="מעצב">
             <option value="all">כל המעצבים</option>
             {designers.map((d) => (
               <option key={d.id} value={d.id}>
@@ -90,10 +107,10 @@ export function ArchivePage() {
               </option>
             ))}
           </select>
-          <select value={period} onChange={(e) => setPeriod(e.target.value)} className={selectCls} aria-label="תאריך אישור">
+          <select value={period} onChange={(e) => setPeriod(e.target.value)} className="input h-10 w-auto py-0" aria-label="מועד האישור">
             {PERIODS.map((p) => (
               <option key={p.value} value={p.value}>
-                {p.label}
+                אושרו {p.label}
               </option>
             ))}
           </select>
@@ -105,39 +122,48 @@ export function ArchivePage() {
               setDesignerId('all');
               setPeriod('all');
             }}
-            className="flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-sm text-slate-500 hover:bg-slate-100"
+            className="flex h-10 items-center justify-center gap-1 rounded-lg px-3 text-[13px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
           >
             <X className="h-4 w-4" />
-            נקה
+            ניקוי
           </button>
         )}
       </div>
 
+      {active && <p className="mt-3 text-[13px] text-zinc-500">נמצאו {works(filtered.length)}</p>}
+
       {groups.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white/50 px-4 py-12 text-center text-sm text-slate-500">
-          לא נמצאו עבודות מאושרות שתואמות לחיפוש
+        <div className="mt-6">
+          <EmptyState icon={<SearchX className="h-6 w-6" />} title="לא נמצאו עבודות" text="נסו מילת חיפוש אחרת, או נקו את הסינון." />
         </div>
       ) : (
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-4">
           {groups.map(({ project, items }) => {
             const isCollapsed = collapsed[project.id];
             return (
-              <section key={project.id} className="rounded-xl border border-slate-200 bg-white" data-testid="archive-group">
+              <section key={project.id} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-card" data-testid="archive-group">
                 <button
                   onClick={() => setCollapsed((c) => ({ ...c, [project.id]: !c[project.id] }))}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-start"
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-start transition hover:bg-zinc-50/70 sm:px-5"
+                  aria-expanded={!isCollapsed}
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${project.color}15`, color: project.color }}>
-                    <Folder className="h-5 w-5" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${project.color}14`, color: project.color }}>
+                    <FolderOpen className="h-5 w-5" />
                   </span>
                   <span className="flex-1">
-                    <span className="block font-semibold text-slate-900">{project.name}</span>
-                    <span className="block text-xs text-slate-500">{items.length === 1 ? 'עבודה מאושרת אחת' : `${items.length} עבודות מאושרות`}</span>
+                    <span className="block font-bold text-zinc-900">{project.name}</span>
+                    <span className="block text-xs text-zinc-500">{items.length === 1 ? 'עבודה מאושרת אחת' : `${items.length} עבודות מאושרות`}</span>
                   </span>
-                  <ChevronDown className={`h-5 w-5 text-slate-400 transition ${isCollapsed ? 'rotate-90' : ''}`} />
+                  <span className="hidden -space-x-1.5 space-x-reverse sm:flex">
+                    {[...new Set(items.map((i) => i.designerId))].map((id) => {
+                      const u = lookups.userById.get(id);
+                      return u ? <Avatar key={id} user={u} size="sm" /> : null;
+                    })}
+                  </span>
+                  <ChevronDown className={`h-5 w-5 text-zinc-400 transition ${isCollapsed ? 'rotate-90' : ''}`} />
                 </button>
                 {!isCollapsed && (
-                  <div className="grid grid-cols-2 gap-3 border-t border-slate-100 p-3 sm:gap-4 sm:p-4 md:grid-cols-3 xl:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 bg-zinc-50/50 p-3 sm:gap-4 sm:p-5 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     {items.map((i) => (
                       <ArchiveCard key={i.id} item={i} />
                     ))}
@@ -152,9 +178,6 @@ export function ArchivePage() {
   );
 }
 
-const selectCls =
-  'rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100';
-
 function ArchiveCard({ item }: { item: Item }) {
   const { userById } = useLookups();
   const toast = useToast();
@@ -162,38 +185,43 @@ function ArchiveCard({ item }: { item: Item }) {
   const latest = item.versions[item.versions.length - 1];
   const withSource = [...item.versions].reverse().find((v) => v.sourceFileName);
   return (
-    <div className="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:shadow-md" data-testid="archive-card">
-      <Link to={`/item/${item.id}`}>
-        <FileThumb version={latest} className="aspect-[4/3] p-2" />
+    <div className="group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lift" data-testid="archive-card">
+      <Link to={`/item/${item.id}`} className="checker relative block">
+        <FileThumb version={latest} className="aspect-[4/3] p-3" />
+        <span className="absolute start-2 top-2 flex items-center gap-1 rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-zinc-600 shadow-sm ring-1 ring-zinc-900/5" title="גרסאות שמורות">
+          <Layers className="h-3 w-3" />
+          {item.versions.length}
+        </span>
       </Link>
-      <div className="flex flex-1 flex-col gap-1.5 p-2.5">
-        <Link to={`/item/${item.id}`} className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 hover:text-brand-700">
+      <div className="flex flex-1 flex-col gap-1.5 border-t border-zinc-100 p-3">
+        <Link to={`/item/${item.id}`} className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900 hover:text-brand-700">
           {item.title}
         </Link>
-        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-          {designer && <Avatar user={designer} size="xs" />}
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+          {designer && <Avatar user={designer} size="xs" ring={false} />}
           <span className="truncate">{designer?.name}</span>
         </div>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
-          <span>אושר {formatDate(decidedAt(item))}</span>
-          <span className="flex items-center gap-0.5" title="מספר גרסאות">
-            <Layers className="h-3 w-3" />
-            {item.versions.length}
-          </span>
+        <div className="text-[11px] text-zinc-400">אושר ב-{formatDate(decidedAt(item))}</div>
+        <div className="mt-auto pt-2">
+          {withSource ? (
+            <button
+              onClick={() => {
+                void downloadSource(withSource);
+                toast(`ההורדה של ${withSource.sourceFileName} התחילה`, { tone: 'info' });
+              }}
+              className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 text-xs font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+              title={withSource.sourceFileName}
+            >
+              <Download className="h-3.5 w-3.5" />
+              קובץ מקור
+              <span className="max-w-[5rem] truncate font-normal text-zinc-400" dir="ltr">
+                .{withSource.sourceFileName?.split('.').pop()}
+              </span>
+            </button>
+          ) : (
+            <div className="flex h-8 items-center justify-center text-[11px] text-zinc-400">ללא קובץ מקור</div>
+          )}
         </div>
-        {withSource && (
-          <button
-            onClick={() => {
-              void downloadSource(withSource);
-              toast(`מוריד את ${withSource.sourceFileName}`, 'info');
-            }}
-            className="mt-1 flex items-center justify-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-            title={withSource.sourceFileName}
-          >
-            <Download className="h-3.5 w-3.5" />
-            קובץ מקור
-          </button>
-        )}
       </div>
     </div>
   );

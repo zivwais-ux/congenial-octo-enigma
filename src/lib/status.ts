@@ -2,41 +2,39 @@ import type { Channel, Status } from '../types';
 
 export const STATUS_ORDER: Status[] = ['pending', 'changes', 'approved', 'rejected'];
 
-export const STATUS_META: Record<
-  Status,
-  { label: string; badge: string; dot: string; soft: string; ring: string }
-> = {
+/** צבע עקבי לכל סטטוס, בכל מקום באפליקציה */
+export const STATUS_META: Record<Status, { label: string; badge: string; dot: string; soft: string; text: string }> = {
   pending: {
     label: 'ממתין לאישור',
     badge: 'bg-sky-50 text-sky-700 ring-sky-600/20',
     dot: 'bg-sky-500',
     soft: 'bg-sky-50',
-    ring: 'ring-sky-200',
+    text: 'text-sky-700',
   },
   changes: {
     label: 'נדרשים תיקונים',
     badge: 'bg-amber-50 text-amber-800 ring-amber-600/25',
     dot: 'bg-amber-500',
     soft: 'bg-amber-50',
-    ring: 'ring-amber-200',
+    text: 'text-amber-700',
   },
   approved: {
     label: 'מאושר',
     badge: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
     dot: 'bg-emerald-500',
     soft: 'bg-emerald-50',
-    ring: 'ring-emerald-200',
+    text: 'text-emerald-700',
   },
   rejected: {
     label: 'נדחה',
     badge: 'bg-rose-50 text-rose-700 ring-rose-600/20',
     dot: 'bg-rose-500',
     soft: 'bg-rose-50',
-    ring: 'ring-rose-200',
+    text: 'text-rose-700',
   },
 };
 
-/** הערוץ שבו כל משתמש "מקבל" התראות בדמו – כדי להמחיש שההתראה מגיעה לאן שהוא כבר נמצא */
+/** הערוץ שבו כל משתמש "מקבל" התראות בדמו – כדי להמחיש שההתראה מגיעה לאן שכבר עובדים */
 export const USER_CHANNEL: Record<string, Channel> = {
   u1: 'Teams',
   u2: 'וואטסאפ',
@@ -46,8 +44,6 @@ export const USER_CHANNEL: Record<string, Channel> = {
   u6: 'מייל',
 };
 
-export const CHANNEL_META: Record<Channel, string> = {
-  מייל: 'bg-slate-100 text-slate-700',
-  Teams: 'bg-indigo-50 text-indigo-700',
-  וואטסאפ: 'bg-green-50 text-green-700',
-};
+export function channelOf(userId: string): Channel {
+  return USER_CHANNEL[userId] ?? 'מייל';
+}

@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import type { Item } from '../../types';
 import { useStore } from '../../store/StoreProvider';
 import { addVersion } from '../../store/actions';
 import { saveFile } from '../../store/fileStore';
+import { channelOf } from '../../lib/status';
+import { comments } from '../../lib/copy';
 import { Modal } from '../ui/Modal';
-import { USER_CHANNEL } from '../../lib/status';
+import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { FileDrop, mimeOf, PREVIEW_ACCEPT, validatePreview, validateSource } from '../ui/FileDrop';
 
@@ -18,7 +20,8 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
   const [busy, setBusy] = useState(false);
   const next = item.versions.length + 1;
   const approver = state.users.find((u) => u.id === item.approverId);
-  const openComments = state.comments.filter((c) => c.itemId === item.id && c.versionId === item.versions[item.versions.length - 1].id && !c.resolved).length;
+  const latest = item.versions[item.versions.length - 1];
+  const openComments = state.comments.filter((c) => c.itemId === item.id && c.versionId === latest.id && !c.resolved).length;
 
   const close = () => {
     setPreview(null);
@@ -40,7 +43,7 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
           source: source && sourceUrl ? { url: sourceUrl, name: source.name } : undefined,
         }),
       );
-      toast(`גרסה ${next} נשלחה ל${approver?.name} לאישור · התראה ב-${USER_CHANNEL[item.approverId] ?? 'מייל'}`);
+      toast(`גרסה ${next} נשלחה ל${approver?.name}`, { channel: channelOf(item.approverId) });
       close();
     } finally {
       setBusy(false);
@@ -48,11 +51,22 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
   };
 
   return (
-    <Modal open={open} onClose={close} title={`העלאת גרסה ${next}`}>
-      <div className="max-h-[70vh] space-y-4 overflow-y-auto">
+    <Modal
+      open={open}
+      onClose={close}
+      title={`העלאת גרסה ${next}`}
+      description={approver ? `הגרסה תחזור ל${approver.name} לאישור, וגרסה ${latest.number} תישאר בהיסטוריה להשוואה.` : undefined}
+      icon={
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+          <Layers className="h-5 w-5" />
+        </span>
+      }
+      width="max-w-lg"
+    >
+      <div className="space-y-3">
         {openComments > 0 && (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            שימו לב: {openComments} הערות על הגרסה הנוכחית עדיין לא סומנו כ"טופל".
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+            {comments(openComments)} על גרסה {latest.number} עדיין לא {openComments === 1 ? 'סומנה' : 'סומנו'} כ"טופל". אפשר להעלות בכל זאת.
           </p>
         )}
         <FileDrop
@@ -60,36 +74,29 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
           onChange={setPreview}
           accept={PREVIEW_ACCEPT}
           validate={validatePreview}
-          title="קובץ תצוגה לגרסה החדשה"
-          hint="PNG, JPG או PDF"
+          title="קובץ התצוגה של הגרסה החדשה"
+          hint="PNG, JPG או PDF · גוררים לכאן או לוחצים לבחירה"
           showPreview
           compact
           testId="version-preview-input"
         />
-        <FileDrop file={source} onChange={setSource} validate={validateSource} title="קובץ מקור (אופציונלי)" hint="PSD, AI, INDD…" compact />
+        <FileDrop file={source} onChange={setSource} validate={validateSource} title="קובץ מקור (לא חובה)" hint="PSD, AI, INDD וכו׳" compact />
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
-          placeholder="מה השתנה בגרסה הזו?"
-          className="w-full resize-none rounded-lg border border-slate-200 p-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          placeholder="מה השתנה בגרסה הזו? ההערה תוצג ליד הגרסה"
+          className="input resize-none"
           data-testid="version-note"
         />
       </div>
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={close} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="ghost" onClick={close}>
           ביטול
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!preview || busy}
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-40"
-          data-testid="submit-version"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          שליחת גרסה {next}
-        </button>
+        </Button>
+        <Button variant="primary" onClick={submit} disabled={!preview} loading={busy} data-testid="submit-version">
+          שליחת גרסה {next} לאישור
+        </Button>
       </div>
     </Modal>
   );

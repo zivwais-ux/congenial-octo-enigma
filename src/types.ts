@@ -77,9 +77,15 @@ export interface Comment {
   resolved: boolean;
 }
 
+export type NotificationKind = 'new' | 'version' | 'approved' | 'changes' | 'rejected' | 'overdue';
+
 export interface Notification {
   id: string;
   userId: string;
+  kind: NotificationKind;
+  /** מי ביצע את הפעולה (אין במקרה של תזכורת מערכת) */
+  actorId?: string;
+  /** פירוט קצר (לא חובה); הכותרת נגזרת מסוג ההתראה ומשם העבודה */
   text: string;
   itemId: string;
   read: boolean;
@@ -87,8 +93,14 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface TourState {
+  /** האם הארכיון נפתח אחרי שעבודת ההדגמה אושרה */
+  archiveSeen: boolean;
+}
+
 export interface AppState {
   schema: number;
+  tour: TourState;
   currentUserId: string;
   users: User[];
   projects: Project[];

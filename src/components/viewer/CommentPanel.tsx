@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, MapPin, MessageSquarePlus, Send } from 'lucide-react';
+import { Check, CornerDownLeft, MapPin, MessageSquareDashed } from 'lucide-react';
 import type { Comment } from '../../types';
 import { useLookups } from '../../store/StoreProvider';
 import { timeAgo } from '../../lib/dates';
@@ -42,28 +42,28 @@ export function CommentPanel(p: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div ref={listRef} className="scroll-thin flex-1 space-y-5 overflow-y-auto p-4">
         {resolvedCount > 0 && (
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
-            <input
-              type="checkbox"
-              checked={p.showResolved}
-              onChange={(e) => p.onShowResolved(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600"
-            />
-            הצג גם הערות שטופלו ({resolvedCount})
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-xs font-medium text-zinc-500">
+            <input type="checkbox" checked={p.showResolved} onChange={(e) => p.onShowResolved(e.target.checked)} className="h-3.5 w-3.5 rounded border-zinc-300 accent-zinc-900" />
+            להציג גם הערות שטופלו ({resolvedCount})
           </label>
         )}
 
         {empty && (
-          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-slate-400">
-            <MessageSquarePlus className="h-8 w-8" />
-            {p.canPin ? 'אין הערות פתוחות. לחצו על התמונה כדי להצמיד הערה, או כתבו הערה כללית למטה.' : 'אין הערות פתוחות על הגרסה הזו.'}
+          <div className="flex flex-col items-center px-4 py-10 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
+              <MessageSquareDashed className="h-5 w-5" />
+            </span>
+            <span className="mt-3 text-sm font-semibold text-zinc-800">{resolvedCount ? 'כל ההערות טופלו' : 'אין עדיין הערות על הגרסה הזו'}</span>
+            <span className="mt-1 max-w-[16rem] text-xs leading-relaxed text-zinc-500">
+              {p.canPin ? 'לחצו על נקודה בעבודה כדי להשאיר הערה מדויקת, או כתבו הערה כללית למטה.' : 'הערות כלליות אפשר תמיד לכתוב למטה.'}
+            </span>
           </div>
         )}
 
         {pinned.length > 0 && (
-          <Group title="על התמונה">
+          <Group title="על העבודה" count={pinned.length}>
             {pinned.map(({ comment, number }) => (
               <CommentRow
                 key={comment.id}
@@ -78,18 +78,18 @@ export function CommentPanel(p: Props) {
         )}
 
         {general.length > 0 && (
-          <Group title="הערות כלליות">
+          <Group title="הערות כלליות" count={general.length}>
             {general.map((c) => (
               <CommentRow key={c.id} comment={c} onToggle={() => p.onToggleResolved(c.id)} />
             ))}
           </Group>
         )}
 
-        {p.olderCount > 0 && <p className="text-center text-[11px] text-slate-400">עוד {p.olderCount} הערות בגרסאות קודמות</p>}
+        {p.olderCount > 0 && <p className="text-center text-[11px] text-zinc-400">עוד {p.olderCount === 1 ? 'הערה אחת' : `${p.olderCount} הערות`} בגרסאות קודמות</p>}
       </div>
 
-      <div className="border-t border-slate-200 p-3">
-        <div className="flex items-end gap-2">
+      <div className="border-t border-zinc-200 bg-white p-3">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm shadow-zinc-900/[0.02] transition focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -99,47 +99,41 @@ export function CommentPanel(p: Props) {
                 submit();
               }
             }}
-            rows={1}
-            placeholder="הערה כללית…"
-            className="max-h-32 min-h-[40px] flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            rows={2}
+            placeholder="הערה כללית על הגרסה…"
+            className="block max-h-32 w-full resize-none bg-transparent px-3 pt-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
             data-testid="general-comment-input"
           />
-          <button
-            onClick={submit}
-            disabled={!text.trim()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40"
-            aria-label="שליחת הערה"
-          >
-            <Send className="h-4 w-4 -scale-x-100" />
-          </button>
+          <div className="flex items-center justify-between px-2 pb-2">
+            <span className="ps-1 text-[11px] text-zinc-400">Enter לשליחה · Shift+Enter לשורה חדשה</span>
+            <button
+              onClick={submit}
+              disabled={!text.trim()}
+              className="flex h-7 items-center gap-1 rounded-md bg-zinc-900 px-2.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-25"
+            >
+              שליחה
+              <CornerDownLeft className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{title}</h3>
+      <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
+        {title}
+        <span className="text-zinc-300">{count}</span>
+      </h3>
       <div className="space-y-2">{children}</div>
     </div>
   );
 }
 
-function CommentRow({
-  comment,
-  number,
-  active,
-  onClick,
-  onToggle,
-}: {
-  comment: Comment;
-  number?: number;
-  active?: boolean;
-  onClick?: () => void;
-  onToggle: () => void;
-}) {
+function CommentRow({ comment, number, active, onClick, onToggle }: { comment: Comment; number?: number; active?: boolean; onClick?: () => void; onToggle: () => void }) {
   const { userById } = useLookups();
   const author = userById.get(comment.authorId);
   return (
@@ -147,31 +141,28 @@ function CommentRow({
       data-comment={comment.id}
       data-testid="comment"
       onClick={onClick}
-      className={`group rounded-lg border p-3 transition ${onClick ? 'cursor-pointer' : ''} ${
-        active ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-100' : 'border-slate-200 bg-white hover:border-slate-300'
-      } ${comment.resolved ? 'opacity-60' : ''}`}
+      className={`group rounded-xl border p-3 transition ${onClick ? 'cursor-pointer' : ''} ${
+        active ? 'border-brand-300 bg-brand-50/60 ring-4 ring-brand-500/10' : 'border-zinc-200 bg-white hover:border-zinc-300'
+      }`}
     >
       <div className="flex items-start gap-2.5">
-        {number !== undefined ? (
-          <span
-            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${
-              active ? 'bg-brand-600' : comment.resolved ? 'bg-slate-400' : 'bg-rose-500'
-            }`}
-          >
-            {number}
-          </span>
-        ) : (
-          author && <Avatar user={author} size="sm" />
-        )}
+        {author && <Avatar user={author} size="sm" ring={false} />}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-xs">
-            {number !== undefined && author && <Avatar user={author} size="xs" />}
-            <span className="font-semibold text-slate-800">{author?.name}</span>
-            <span className="text-slate-400">· {timeAgo(comment.createdAt)}</span>
+            <span className="font-semibold text-zinc-900">{author?.name}</span>
+            <span className="text-zinc-400">{timeAgo(comment.createdAt)}</span>
+            {number !== undefined && (
+              <span
+                className={`ms-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ${
+                  active ? 'bg-brand-600' : comment.resolved ? 'bg-zinc-400' : 'bg-rose-500'
+                }`}
+                title="מספר הסימון על העבודה"
+              >
+                {number}
+              </span>
+            )}
           </div>
-          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700 ${comment.resolved ? 'line-through decoration-slate-300' : ''}`}>
-            {comment.text}
-          </p>
+          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${comment.resolved ? 'text-zinc-400 line-through decoration-zinc-300' : 'text-zinc-700'}`}>{comment.text}</p>
           <div className="mt-2 flex items-center gap-3">
             <button
               type="button"
@@ -179,18 +170,18 @@ function CommentRow({
                 e.stopPropagation();
                 onToggle();
               }}
-              className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${
-                comment.resolved ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+              className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold transition ${
+                comment.resolved ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
               }`}
               data-testid="resolve-btn"
             >
-              <Check className="h-3.5 w-3.5" />
-              {comment.resolved ? 'טופל' : 'סמן כטופל'}
+              <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+              {comment.resolved ? 'טופל' : 'סימון כטופל'}
             </button>
-            {number !== undefined && (
-              <span className="flex items-center gap-1 text-[11px] text-slate-400">
+            {number !== undefined && onClick && (
+              <span className="flex items-center gap-1 text-[11px] text-zinc-400 opacity-0 transition group-hover:opacity-100">
                 <MapPin className="h-3 w-3" />
-                מוצמד לתמונה
+                {active ? 'מודגש על העבודה' : 'להדגשה על העבודה'}
               </span>
             )}
           </div>

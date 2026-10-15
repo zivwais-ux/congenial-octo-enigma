@@ -6,12 +6,8 @@ import { USER_CHANNEL } from '../lib/status';
 
 const now = () => new Date().toISOString();
 
-function userName(s: AppState, id: string) {
-  return s.users.find((u) => u.id === id)?.name ?? '';
-}
-
-function notify(userId: string, itemId: string, text: string): Notification {
-  return { id: uid('n'), userId, itemId, text, read: false, channel: USER_CHANNEL[userId] ?? 'מייל', createdAt: now() };
+function notify(userId: string, itemId: string, kind: Notification['kind'], actorId: string, text = ''): Notification {
+  return { id: uid('n'), userId, itemId, kind, actorId, text, read: false, channel: USER_CHANNEL[userId] ?? 'מייל', createdAt: now() };
 }
 
 function patchItem(s: AppState, itemId: string, fn: (item: Item) => Item): AppState {
@@ -60,7 +56,7 @@ export function createItem(s: AppState, input: NewItemInput): { state: AppState;
     createdAt: now(),
     events: [event({ type: 'uploaded', authorId: designerId, versionNumber: 1, text: input.note || undefined })],
   };
-  const n = notify(input.approverId, itemId, `"${item.title}" ממתין לאישורך · נשלח ע״י ${userName(s, designerId)}`);
+  const n = notify(input.approverId, itemId, 'new', designerId, input.note);
   return { state: { ...s, items: [item, ...s.items], notifications: [n, ...s.notifications] }, item };
 }
 
@@ -89,15 +85,9 @@ export function addVersion(
     versions: [...i.versions, version],
     events: [...i.events, event({ type: 'version', authorId: s.currentUserId, versionNumber: number, text: input.note || undefined })],
   }));
-  const n = notify(item.approverId, itemId, `גרסה ${number} של "${item.title}" הועלתה ע״י ${userName(s, s.currentUserId)}`);
+  const n = notify(item.approverId, itemId, 'version', s.currentUserId, input.note);
   return { ...next, notifications: [n, ...next.notifications] };
 }
-
-const DECISION_TEXT: Record<Exclude<Status, 'pending'>, (title: string, name: string) => string> = {
-  approved: (title, name) => `"${title}" אושר ע״י ${name}`,
-  changes: (title, name) => `נדרשים תיקונים ב"${title}" · ע״י ${name}`,
-  rejected: (title, name) => `"${title}" נדחה ע״י ${name}`,
-};
 
 export function decide(s: AppState, itemId: string, status: Exclude<Status, 'pending'>, text: string): AppState {
   const item = s.items.find((i) => i.id === itemId);
@@ -108,7 +98,7 @@ export function decide(s: AppState, itemId: string, status: Exclude<Status, 'pen
     status,
     events: [...i.events, event({ type: 'decision', authorId: s.currentUserId, versionNumber, status, text: text || undefined })],
   }));
-  const n = notify(item.designerId, itemId, DECISION_TEXT[status](item.title, userName(s, s.currentUserId)));
+  const n = notify(item.designerId, itemId, status, s.currentUserId, text);
   return { ...next, notifications: [n, ...next.notifications] };
 }
 
