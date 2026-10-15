@@ -5,6 +5,7 @@ import { useStore } from '../../store/StoreProvider';
 import { addVersion } from '../../store/actions';
 import { saveFile } from '../../store/fileStore';
 import { Modal } from '../ui/Modal';
+import { USER_CHANNEL } from '../../lib/status';
 import { useToast } from '../ui/Toast';
 import { FileDrop, mimeOf, PREVIEW_ACCEPT, validatePreview, validateSource } from '../ui/FileDrop';
 
@@ -39,7 +40,7 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
           source: source && sourceUrl ? { url: sourceUrl, name: source.name } : undefined,
         }),
       );
-      toast(`גרסה ${next} נשלחה ל${approver?.name} לאישור`);
+      toast(`גרסה ${next} נשלחה ל${approver?.name} לאישור · התראה ב-${USER_CHANNEL[item.approverId] ?? 'מייל'}`);
       close();
     } finally {
       setBusy(false);

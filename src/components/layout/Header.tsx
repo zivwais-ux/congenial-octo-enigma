@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import { useStore } from '../../store/StoreProvider';
 import { UserSwitcher } from './UserSwitcher';
+import { NotificationBell } from './NotificationBell';
 import { NAV } from './nav';
 
 export function Logo() {
@@ -21,8 +21,7 @@ export function Logo() {
 }
 
 export function Header() {
-  const { state, currentUser } = useStore();
-  const unread = state.notifications.filter((n) => n.userId === currentUser.id && !n.read).length;
+  const { currentUser } = useStore();
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -49,18 +48,7 @@ export function Header() {
           <span className="hidden rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200 lg:inline">
             גרסת דמו
           </span>
-          <button
-            type="button"
-            className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-            aria-label={`התראות (${unread} חדשות)`}
-          >
-            <Bell className="h-5 w-5" />
-            {unread > 0 && (
-              <span className="absolute -top-0.5 end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                {unread}
-              </span>
-            )}
-          </button>
+          <NotificationBell />
           <UserSwitcher />
         </div>
       </div>

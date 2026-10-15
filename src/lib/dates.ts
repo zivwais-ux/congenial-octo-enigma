@@ -22,6 +22,7 @@ export function urgency(dueDate: string): Urgency {
 
 export function dueLabel(dueDate: string) {
   const n = daysUntil(dueDate);
+  if (n === -2) return 'באיחור של יומיים';
   if (n < -1) return `באיחור של ${-n} ימים`;
   if (n === -1) return 'באיחור של יום';
   if (n === 0) return 'היום';
@@ -48,6 +49,7 @@ export function timeAgo(iso: string) {
   if (h < 24) return h === 1 ? 'לפני שעה' : h === 2 ? 'לפני שעתיים' : `לפני ${h} שעות`;
   const d = Math.round(h / 24);
   if (d === 1) return 'אתמול';
+  if (d === 2) return 'לפני יומיים';
   if (d < 7) return `לפני ${d} ימים`;
   return formatDate(iso);
 }

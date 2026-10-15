@@ -16,6 +16,7 @@ import { VersionTabs } from '../components/viewer/VersionTabs';
 import { CompareView } from '../components/viewer/CompareView';
 import { NewVersionModal } from '../components/upload/NewVersionModal';
 import { downloadSource } from '../lib/download';
+import { USER_CHANNEL } from '../lib/status';
 import { formatDateTime } from '../lib/dates';
 
 export function ItemPage() {
@@ -94,7 +95,7 @@ function ItemView({ item }: { item: Item }) {
   const onDecide = (d: Exclude<Status, 'pending'>, text: string) => {
     update((s) => decide(s, item.id, d, text));
     const msg = { approved: `העבודה אושרה. נשלחה התראה ל${designer.name}`, changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: `העבודה נדחתה. נשלחה התראה ל${designer.name}` }[d];
-    toast(msg);
+    toast(`${msg} · ${USER_CHANNEL[designer.id] ?? 'מייל'}`);
   };
 
   const selectFromList = (id: string | null) => {

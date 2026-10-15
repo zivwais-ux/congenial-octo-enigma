@@ -8,6 +8,7 @@ import { useToast } from '../components/ui/Toast';
 import { Avatar } from '../components/ui/Avatar';
 import { FileDrop, mimeOf, PREVIEW_ACCEPT, validatePreview, validateSource } from '../components/ui/FileDrop';
 import { uid } from '../lib/id';
+import { USER_CHANNEL } from '../lib/status';
 
 function plusDays(n: number) {
   const d = new Date();
@@ -75,7 +76,7 @@ export function UploadPage() {
           }).state,
       );
       const approver = state.users.find((u) => u.id === approverId);
-      toast(`נשלח ל${approver?.name} לאישור`);
+      toast(`נשלח ל${approver?.name} לאישור · התראה ב-${USER_CHANNEL[approverId] ?? 'מייל'}`);
       navigate(`/item/${id}`);
     } finally {
       setBusy(false);
@@ -194,8 +195,8 @@ export const inputCls =
 export function Field({ label, required, hint, error, children }: { label: string; required?: boolean; hint?: string; error?: string; children: ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-baseline gap-2">
-        <span className="text-sm font-medium text-slate-800">
+      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="shrink-0 text-sm font-medium text-slate-800">
           {label}
           {required && <span className="text-rose-500"> *</span>}
         </span>
