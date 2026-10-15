@@ -23,6 +23,8 @@ function event(e: Omit<ItemEvent, 'id' | 'at'>): ItemEvent {
 }
 
 export interface NewItemInput {
+  /** מזהה שנוצר מראש, כדי שאפשר יהיה לנווט לפריט מיד אחרי השליחה */
+  id?: string;
   title: string;
   projectId: string;
   approverId: string;
@@ -34,7 +36,7 @@ export interface NewItemInput {
 
 export function createItem(s: AppState, input: NewItemInput): { state: AppState; item: Item } {
   const designerId = s.currentUserId;
-  const itemId = uid('i');
+  const itemId = input.id ?? uid('i');
   const version: Version = {
     id: uid('v'),
     number: 1,

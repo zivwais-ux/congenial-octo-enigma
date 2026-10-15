@@ -14,7 +14,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const push = useCallback((text: string, tone: Toast['tone'] = 'success') => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, tone }]);
+    setToasts((t) => [...t.slice(-2), { id, text, tone }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
   }, []);
 

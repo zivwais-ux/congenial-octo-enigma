@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Download, Upload, Wrench, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Columns2, Download, Upload, Wrench, XCircle } from 'lucide-react';
 import type { Item, Pin, Status } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { addComment, decide, toggleResolved } from '../store/actions';
@@ -13,6 +13,8 @@ import { CommentPanel } from '../components/viewer/CommentPanel';
 import { Timeline } from '../components/viewer/Timeline';
 import { DecisionBar } from '../components/viewer/DecisionBar';
 import { VersionTabs } from '../components/viewer/VersionTabs';
+import { CompareView } from '../components/viewer/CompareView';
+import { NewVersionModal } from '../components/upload/NewVersionModal';
 import { downloadSource } from '../lib/download';
 import { formatDateTime } from '../lib/dates';
 
@@ -44,10 +46,15 @@ function ItemView({ item }: { item: Item }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [tab, setTab] = useState<'comments' | 'timeline'>('comments');
   const [showResolved, setShowResolved] = useState(false);
+  const [compare, setCompare] = useState(false);
+  const [newVersionOpen, setNewVersionOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // גרסה חדשה עלתה – עוברים אליה
-  useEffect(() => setViewId(latest.id), [latest.id]);
+  useEffect(() => {
+    setViewId(latest.id);
+    setCompare(false);
+  }, [latest.id]);
 
   // פתיחת הפריט מסמנת את ההתראות שלו כנקראו
   useEffect(() => {
@@ -60,6 +67,8 @@ function ItemView({ item }: { item: Item }) {
 
   const version = item.versions.find((v) => v.id === viewId) ?? latest;
   const isLatest = version.id === latest.id;
+  // קובץ המקור של הגרסה הנצפית, ואם אין לה – האחרון שהועלה
+  const sourceVersion = version.sourceFileName ? version : [...item.versions].reverse().find((v) => v.sourceFileName);
   const project = projectById.get(item.projectId);
   const designer = userById.get(item.designerId)!;
   const approver = userById.get(item.approverId)!;
@@ -121,19 +130,20 @@ function ItemView({ item }: { item: Item }) {
             <DueLabel dueDate={item.dueDate} status={item.status} />
           </div>
         </div>
-        {version.sourceFileName && (
+        {sourceVersion && (
           <button
             onClick={() => {
-              void downloadSource(version);
-              toast(`מוריד את ${version.sourceFileName}`, 'info');
+              void downloadSource(sourceVersion);
+              toast(`מוריד את ${sourceVersion.sourceFileName}`, 'info');
             }}
             className="flex items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 lg:self-auto"
             data-testid="download-source"
           >
             <Download className="h-4 w-4" />
             <span className="max-w-[16rem] truncate" dir="ltr">
-              {version.sourceFileName}
+              {sourceVersion.sourceFileName}
             </span>
+            {sourceVersion.id !== version.id && <span className="text-xs text-slate-400">(מגרסה {sourceVersion.number})</span>}
           </button>
         )}
       </div>
@@ -142,34 +152,72 @@ function ItemView({ item }: { item: Item }) {
         {/* תצוגה מקדימה */}
         <div ref={previewRef} className="min-w-0 scroll-mt-20 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <VersionTabs versions={item.versions} value={version.id} onChange={(v) => { setViewId(v); setActiveId(null); }} />
-            {!isLatest && (
-              <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">צופים בגרסה ישנה</span>
+            {compare ? (
+              <span className="text-sm font-semibold text-slate-700">השוואת גרסאות</span>
+            ) : (
+              <VersionTabs
+                versions={item.versions}
+                value={version.id}
+                onChange={(v) => {
+                  setViewId(v);
+                  setActiveId(null);
+                }}
+              />
             )}
-          </div>
-          <PreviewPane
-            version={version}
-            pins={pinned}
-            activeId={activeId}
-            onSelect={setActiveId}
-            onAddPin={canPin ? onAddPin : undefined}
-            showResolved={showResolved}
-          />
-          {version.note && (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-              <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-                <Avatar user={designer} size="xs" />
-                {designer.name} · הערה לגרסה {version.number} · {formatDateTime(version.uploadedAt)}
-              </div>
-              <p className="text-slate-700">{version.note}</p>
+            <div className="flex items-center gap-2">
+              {!isLatest && !compare && (
+                <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">צופים בגרסה ישנה</span>
+              )}
+              {item.versions.length > 1 && (
+                <button
+                  onClick={() => setCompare((c) => !c)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition ${
+                    compare ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                  data-testid="compare-toggle"
+                >
+                  <Columns2 className="h-4 w-4" />
+                  {compare ? 'סגירת השוואה' : 'השוואה'}
+                </button>
+              )}
             </div>
+          </div>
+          {compare ? (
+            <CompareView item={item} comments={itemComments} />
+          ) : (
+            <>
+              <PreviewPane
+                version={version}
+                pins={pinned}
+                activeId={activeId}
+                onSelect={setActiveId}
+                onAddPin={canPin ? onAddPin : undefined}
+                showResolved={showResolved}
+              />
+              {version.note && (
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                  <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
+                    <Avatar user={designer} size="xs" />
+                    {designer.name} · הערה לגרסה {version.number} · {formatDateTime(version.uploadedAt)}
+                  </div>
+                  <p className="text-slate-700">{version.note}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* פאנל צד */}
         <aside className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)]">
           {canDecide && <DecisionBar onDecide={onDecide} openPinCount={openPins} designerName={designer.name} />}
-          <StatusBanner item={item} isDesigner={isDesigner} isApprover={isApprover} lastDecisionText={lastDecision?.text} approverName={approver.name} />
+          <StatusBanner
+            item={item}
+            isDesigner={isDesigner}
+            isApprover={isApprover}
+            lastDecisionText={lastDecision?.text}
+            approverName={approver.name}
+            onNewVersion={() => setNewVersionOpen(true)}
+          />
 
           <div className="flex border-b border-slate-200 px-2" role="tablist">
             <TabBtn active={tab === 'comments'} onClick={() => setTab('comments')}>
@@ -201,6 +249,7 @@ function ItemView({ item }: { item: Item }) {
           )}
         </aside>
       </div>
+      {isDesigner && <NewVersionModal item={item} open={newVersionOpen} onClose={() => setNewVersionOpen(false)} />}
     </div>
   );
 }
@@ -226,14 +275,15 @@ function StatusBanner({
   isApprover,
   lastDecisionText,
   approverName,
+  onNewVersion,
 }: {
   item: Item;
   isDesigner: boolean;
   isApprover: boolean;
   lastDecisionText?: string;
   approverName: string;
+  onNewVersion: () => void;
 }) {
-  const toast = useToast();
   if (item.status === 'pending') {
     if (isApprover) return null;
     return (
@@ -252,7 +302,7 @@ function StatusBanner({
         {lastDecisionText && <p className="mt-1 text-sm text-amber-900/80">"{lastDecisionText}"</p>}
         {isDesigner && (
           <button
-            onClick={() => toast('העלאת גרסה חדשה תתווסף בשלב 3', 'info')}
+            onClick={onNewVersion}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
             data-testid="upload-version-btn"
           >

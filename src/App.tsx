@@ -5,6 +5,7 @@ import { AppShell } from './components/layout/AppShell';
 import { DashboardPage } from './pages/DashboardPage';
 import { ComingSoon } from './pages/ComingSoon';
 import { ItemPage } from './pages/ItemPage';
+import { UploadPage } from './pages/UploadPage';
 
 export default function App() {
   return (
@@ -15,7 +16,7 @@ export default function App() {
             <Route element={<AppShell />}>
               <Route index element={<DashboardPage />} />
               <Route path="item/:id" element={<ItemPage />} />
-              <Route path="upload" element={<ComingSoon title="העלאת עבודה" />} />
+              <Route path="upload" element={<UploadPage />} />
               <Route path="archive" element={<ComingSoon title="ארכיון" />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
