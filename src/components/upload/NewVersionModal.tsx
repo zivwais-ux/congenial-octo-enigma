@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Layers } from 'lucide-react';
 import type { Item } from '../../types';
 import { useStore } from '../../store/StoreProvider';
 import { addVersion } from '../../store/actions';
@@ -55,18 +54,13 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
       open={open}
       onClose={close}
       title={`העלאת גרסה ${next}`}
-      description={approver ? `הגרסה תחזור ל${approver.name} לאישור, וגרסה ${latest.number} תישאר בהיסטוריה להשוואה.` : undefined}
-      icon={
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-          <Layers className="h-5 w-5" />
-        </span>
-      }
-      width="max-w-lg"
+      description={approver ? `הגרסה תחזור ל${approver.name} לאישור. גרסה ${latest.number} נשארת בהיסטוריה להשוואה.` : undefined}
+      width="max-w-[480px]"
     >
       <div className="space-y-3">
         {openComments > 0 && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
-            {comments(openComments)} על גרסה {latest.number} עדיין לא {openComments === 1 ? 'סומנה' : 'סומנו'} כ"טופל". אפשר להעלות בכל זאת.
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {comments(openComments)} על גרסה {latest.number} עדיין לא {openComments === 1 ? 'סומנה' : 'סומנו'} כטופלו. אפשר להעלות בכל זאת.
           </p>
         )}
         <FileDrop
@@ -74,28 +68,24 @@ export function NewVersionModal({ item, open, onClose }: { item: Item; open: boo
           onChange={setPreview}
           accept={PREVIEW_ACCEPT}
           validate={validatePreview}
-          title="קובץ התצוגה של הגרסה החדשה"
-          hint="PNG, JPG או PDF · גוררים לכאן או לוחצים לבחירה"
+          title="קובץ לתצוגה"
+          hint="PNG, JPG או PDF"
           showPreview
           compact
           testId="version-preview-input"
         />
-        <FileDrop file={source} onChange={setSource} validate={validateSource} title="קובץ מקור (לא חובה)" hint="PSD, AI, INDD וכו׳" compact />
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          placeholder="מה השתנה בגרסה הזו? ההערה תוצג ליד הגרסה"
-          className="input resize-none"
-          data-testid="version-note"
-        />
+        <FileDrop file={source} onChange={setSource} validate={validateSource} title="קובץ מקור" hint="לא חובה · PSD, AI, INDD" compact />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-ink">מה השתנה</label>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="יוצג ליד הגרסה, למאשר ולצוות" className="input resize-none" data-testid="version-note" />
+        </div>
       </div>
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={close}>
           ביטול
         </Button>
         <Button variant="primary" onClick={submit} disabled={!preview} loading={busy} data-testid="submit-version">
-          שליחת גרסה {next} לאישור
+          שליחת גרסה {next}
         </Button>
       </div>
     </Modal>

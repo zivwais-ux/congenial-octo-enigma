@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, BellOff, CheckCheck, CheckCircle2, Layers, Send, Wrench, XCircle } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import type { Notification } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { markAllRead, markRead } from '../../store/actions';
@@ -10,14 +10,24 @@ import { timeAgo } from '../../lib/dates';
 import { Avatar } from '../ui/Avatar';
 import { ChannelTag } from '../ui/ChannelTag';
 import { FileThumb } from '../ui/FileThumb';
+import { LogoMark } from './Logo';
 
-const KIND: Record<Notification['kind'], { label: string; icon: typeof Bell; cls: string }> = {
-  new: { label: 'שליחה לאישור', icon: Send, cls: 'bg-sky-100 text-sky-700' },
-  version: { label: 'גרסה חדשה', icon: Layers, cls: 'bg-indigo-100 text-indigo-700' },
-  changes: { label: 'בקשת תיקונים', icon: Wrench, cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'אישור', icon: CheckCircle2, cls: 'bg-emerald-100 text-emerald-700' },
-  rejected: { label: 'דחייה', icon: XCircle, cls: 'bg-rose-100 text-rose-700' },
-  overdue: { label: 'תזכורת דדליין', icon: AlarmClock, cls: 'bg-rose-100 text-rose-700' },
+const KIND: Record<Notification['kind'], string> = {
+  new: 'שליחה לאישור',
+  version: 'גרסה חדשה',
+  changes: 'בקשת תיקונים',
+  approved: 'אישור',
+  rejected: 'דחייה',
+  overdue: 'תזכורת דדליין',
+};
+
+const KIND_TONE: Record<Notification['kind'], string> = {
+  new: 'text-stone-500',
+  version: 'text-stone-500',
+  changes: 'text-amber-700',
+  approved: 'text-emerald-700',
+  rejected: 'text-red-700',
+  overdue: 'text-red-700',
 };
 
 export function NotificationBell() {
@@ -39,48 +49,39 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${open ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`relative flex h-8 w-8 items-center justify-center rounded-md transition ${open ? 'bg-stone-100 text-ink' : 'text-stone-500 hover:bg-stone-100 hover:text-ink'}`}
         aria-label={`התראות (${unread} חדשות)`}
         aria-expanded={open}
         data-testid="bell"
       >
-        <Bell className="h-[19px] w-[19px]" />
+        <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
         {unread > 0 && (
-          <span
-            className="absolute -top-0.5 end-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white"
-            data-testid="bell-count"
-          >
+          <span className="num absolute -top-0.5 end-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal-500 px-1 text-[9px] font-semibold text-white ring-2 ring-white" data-testid="bell-count">
             {unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="anim-pop fixed inset-x-2 top-16 z-50 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-pop sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-[25rem]">
-          <div className="flex items-center gap-3 border-b border-zinc-100 px-4 pt-3">
-            <span className="pb-3 text-[15px] font-bold text-zinc-900">התראות</span>
-            <div className="ms-2 flex gap-1 self-end">
-              {(
-                [
-                  ['all', 'הכל'],
-                  ['unread', `לא נקראו${unread ? ` · ${unread}` : ''}`],
-                ] as const
-              ).map(([k, label]) => (
-                <button
-                  key={k}
-                  onClick={() => setTab(k)}
-                  className={`-mb-px border-b-2 px-2 pb-2.5 text-[13px] font-medium transition ${tab === k ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-800'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {unread > 0 && (
+        <div className="anim-pop fixed inset-x-2 top-[60px] z-50 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-pop sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-[23rem]">
+          <div className="flex items-center gap-4 border-b border-stone-200/80 px-4">
+            {(
+              [
+                ['all', 'התראות'],
+                ['unread', 'לא נקראו'],
+              ] as const
+            ).map(([k, label]) => (
               <button
-                onClick={() => update((s) => markAllRead(s, currentUser.id))}
-                className="mb-3 ms-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+                key={k}
+                onClick={() => setTab(k)}
+                className={`-mb-px flex h-11 items-center gap-1.5 border-b text-sm transition ${tab === k ? 'border-ink font-medium text-ink' : 'border-transparent text-stone-500 hover:text-ink'}`}
               >
-                <CheckCheck className="h-3.5 w-3.5" />
+                {label}
+                {k === 'unread' && unread > 0 && <span className="num text-xs text-stone-400">{unread}</span>}
+              </button>
+            ))}
+            {unread > 0 && (
+              <button onClick={() => update((s) => markAllRead(s, currentUser.id))} className="ms-auto text-xs text-stone-500 transition hover:text-ink">
                 סימון הכל כנקרא
               </button>
             )}
@@ -88,19 +89,15 @@ export function NotificationBell() {
 
           <div className="scroll-thin flex-1 overflow-y-auto">
             {list.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
-                  <BellOff className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold text-zinc-800">{tab === 'unread' ? 'קראת הכל' : 'אין התראות עדיין'}</span>
-                <span className="text-xs text-zinc-500">כשמשהו יחכה לך, הוא יופיע כאן.</span>
+              <div className="px-6 py-12 text-center">
+                <div className="text-sm font-medium">{tab === 'unread' ? 'הכל נקרא' : 'אין התראות'}</div>
+                <div className="mt-1 text-xs text-stone-500">כשמשהו יחכה לך, הוא יופיע כאן.</div>
               </div>
             ) : (
               list.map((n) => {
                 const item = state.items.find((i) => i.id === n.itemId);
                 const v = item?.versions[item.versions.length - 1];
                 const actor = n.actorId ? userById.get(n.actorId) : undefined;
-                const k = KIND[n.kind];
                 return (
                   <button
                     key={n.id}
@@ -109,50 +106,33 @@ export function NotificationBell() {
                       setOpen(false);
                       if (item) navigate(`/item/${item.id}`);
                     }}
-                    className={`group relative flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3.5 text-start transition last:border-0 hover:bg-zinc-50 ${n.read ? '' : 'bg-brand-50/40'}`}
+                    className="relative flex w-full items-start gap-3 border-b border-stone-100 px-4 py-3 text-start transition last:border-0 hover:bg-stone-50"
                     data-testid="notification"
                   >
-                    <span className="relative shrink-0">
-                      {actor ? (
-                        <Avatar user={actor} ring={false} />
-                      ) : (
-                        <span className={`flex h-8 w-8 items-center justify-center rounded-full ${k.cls}`}>
-                          <k.icon className="h-4 w-4" />
-                        </span>
-                      )}
-                      {actor && (
-                        <span className={`absolute -bottom-1 -end-1 flex h-[18px] w-[18px] items-center justify-center rounded-full ring-2 ring-white ${k.cls}`}>
-                          <k.icon className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                    </span>
+                    {!n.read && <span className="absolute start-1.5 top-[22px] h-1.5 w-1.5 rounded-full bg-signal-500" />}
+                    {actor ? <Avatar user={actor} /> : <LogoMark size={28} />}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] leading-snug text-zinc-600">
-                        {actor && <span className="font-semibold text-zinc-900">{actor.name} · </span>}
-                        {k.label}
+                      <span className="block text-sm leading-5 text-stone-600">
+                        <span className="font-medium text-ink">{actor?.name ?? 'גדות סטודיו'}</span>
+                        <span className={`ms-1.5 ${KIND_TONE[n.kind]}`}>{KIND[n.kind]}</span>
                       </span>
-                      <span className={`mt-0.5 block truncate text-sm ${n.read ? 'text-zinc-700' : 'font-semibold text-zinc-900'}`}>{item?.title}</span>
-                      {n.text && <span className="mt-0.5 block truncate text-xs text-zinc-500">{n.text}</span>}
-                      <span className="mt-1.5 flex items-center gap-1.5 text-[11px] text-zinc-400">
-                        {timeAgo(n.createdAt)}
-                        <span className="text-zinc-300">·</span>
-                        נשלח גם ל
+                      <span className={`block truncate text-sm leading-5 ${n.read ? 'text-stone-600' : 'text-ink'}`}>{item?.title}</span>
+                      {n.text && <span className="mt-0.5 block truncate text-xs text-stone-500">{n.text}</span>}
+                      <span className="mt-1.5 flex items-center gap-2 text-xs text-stone-400">
+                        <span>{timeAgo(n.createdAt)}</span>
                         <ChannelTag channel={n.channel} />
                       </span>
                     </span>
-                    {v && <FileThumb version={v} className="checker h-11 w-14 shrink-0 rounded-md ring-1 ring-zinc-200" />}
-                    {!n.read && <span className="absolute end-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand-500" />}
+                    {v && <FileThumb version={v} className="h-10 w-12 shrink-0 rounded border border-stone-200 bg-stone-50 p-0.5" />}
                   </button>
                 );
               })
             )}
           </div>
 
-          <div className="flex items-start gap-2.5 border-t border-zinc-100 bg-zinc-50/80 px-4 py-3 text-[11px] leading-relaxed text-zinc-500">
-            <span className="mt-px shrink-0">
-              <ChannelTag channel={channelOf(currentUser.id)} />
-            </span>
-            <span>במערכת האמיתית כל התראה תגיע גם לערוץ שבו כבר עובדים. כאן מוצג הערוץ שהוגדר לך.</span>
+          <div className="flex items-center gap-2 border-t border-stone-200/80 bg-stone-50 px-4 py-2.5 text-xs text-stone-500">
+            <ChannelTag channel={channelOf(currentUser.id)} />
+            <span>בגרסה המלאה, כל התראה תגיע גם לערוץ הזה.</span>
           </div>
         </div>
       )}

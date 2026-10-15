@@ -1,69 +1,64 @@
 import { Link, matchPath, useLocation } from 'react-router-dom';
-import { ChevronLeft, Search, Sparkles } from 'lucide-react';
+import { ListChecks, Search } from 'lucide-react';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { Logo } from './Logo';
 import { NotificationBell } from './NotificationBell';
 import { UserSwitcher } from './UserSwitcher';
 import { useUI } from './UIContext';
 
-function useCrumbs(): { label: string; to?: string }[] {
+function useCrumbs(): { label: string; to?: string; color?: string }[] {
   const { pathname } = useLocation();
-  const { state } = useStore();
+  const { state, currentUser } = useStore();
   const { projectById } = useLookups();
   const item = matchPath('/item/:id', pathname);
   if (item) {
     const it = state.items.find((i) => i.id === item.params.id);
     const p = it && projectById.get(it.projectId);
-    return [{ label: p?.name ?? 'עבודה', to: p ? `/?project=${p.id}` : '/' }, { label: it?.title ?? '' }];
+    return [{ label: p?.name ?? 'עבודה', to: p ? `/?project=${p.id}` : '/', color: p?.color }, { label: it?.title ?? '' }];
   }
   if (pathname === '/upload') return [{ label: 'העלאת עבודה' }];
   if (pathname === '/archive') return [{ label: 'ארכיון' }];
-  return [{ label: 'סקירה' }];
+  return [{ label: currentUser.role === 'approver' ? 'תור האישורים' : 'העבודות שלי' }];
 }
 
 export function TopBar() {
   const crumbs = useCrumbs();
   const { setPaletteOpen, setGuideOpen } = useUI();
+  const iconBtn = 'flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition hover:bg-stone-100 hover:text-ink';
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
-      <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
+    <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="flex h-[52px] items-center gap-3 px-4 lg:px-6">
         <div className="lg:hidden">
-          <Logo compact />
+          <Logo />
         </div>
-        <nav className="hidden min-w-0 items-center gap-1.5 text-sm lg:flex" aria-label="מיקום">
+        <nav className="hidden min-w-0 items-center gap-2 text-sm lg:flex" aria-label="מיקום">
           {crumbs.map((c, i) => (
-            <span key={i} className="flex min-w-0 items-center gap-1.5">
-              {i > 0 && <ChevronLeft className="h-4 w-4 shrink-0 text-zinc-300" />}
+            <span key={i} className="flex min-w-0 items-center gap-2">
+              {i > 0 && <span className="text-stone-300">/</span>}
               {c.to ? (
-                <Link to={c.to} className="truncate text-zinc-500 transition hover:text-zinc-900">
+                <Link to={c.to} className="flex items-center gap-1.5 truncate text-stone-500 transition hover:text-ink">
+                  {c.color && <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: c.color }} />}
                   {c.label}
                 </Link>
               ) : (
-                <span className="truncate font-semibold text-zinc-900">{c.label}</span>
+                <span className="truncate font-medium text-ink">{c.label}</span>
               )}
             </span>
           ))}
         </nav>
-        <div className="ms-auto flex items-center gap-1">
-          <span className="me-2 hidden rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 xl:inline-flex">
-            גרסת הדגמה · הנתונים נשמרים בדפדפן בלבד
+        <div className="ms-auto flex items-center gap-0.5">
+          <span className="me-3 hidden items-center gap-1.5 text-xs text-stone-400 xl:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-signal-500" />
+            סקיצה להדגמה · הנתונים נשמרים בדפדפן בלבד
           </span>
-          <button
-            onClick={() => setGuideOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-brand-600 transition hover:bg-brand-50 lg:hidden"
-            aria-label="מדריך ההדגמה"
-          >
-            <Sparkles className="h-[18px] w-[18px]" />
+          <button onClick={() => setGuideOpen(true)} className={`${iconBtn} lg:hidden`} aria-label="תסריט ההדגמה">
+            <ListChecks className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </button>
-          <button
-            onClick={() => setPaletteOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
-            aria-label="חיפוש"
-          >
-            <Search className="h-[18px] w-[18px]" />
+          <button onClick={() => setPaletteOpen(true)} className={`${iconBtn} lg:hidden`} aria-label="חיפוש">
+            <Search className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </button>
           <NotificationBell />
-          <div className="ms-1 lg:hidden">
+          <div className="ms-1.5 lg:hidden">
             <UserSwitcher variant="compact" />
           </div>
         </div>

@@ -2,7 +2,7 @@ import type { AppState, Comment, Item, ItemEvent, Notification, Pin, Project, St
 import { placeholderDataUrl, type PlaceholderSpec } from './placeholders';
 import { USER_CHANNEL } from '../lib/status';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** מזהי עבודות הדמה – כל עבודה אחרת נוצרה במהלך ההדגמה */
 export const SEED_ITEM_IDS = new Set(['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12']);
@@ -11,19 +11,19 @@ const HOUR = 3600_000;
 const DAY = 24 * HOUR;
 
 export const users: User[] = [
-  { id: 'u1', name: 'מיכל אברהם', role: 'approver', avatar: 'מא', title: 'מנהלת מחלקת עיצוב', color: '#7c3aed' },
-  { id: 'u2', name: 'יוסי כהן', role: 'approver', avatar: 'יכ', title: 'גרפיקאי בכיר', color: '#0e7490' },
-  { id: 'u3', name: 'נועה לוי', role: 'designer', avatar: 'נל', title: 'מעצבת גרפית', color: '#db2777' },
-  { id: 'u4', name: 'עומר מזרחי', role: 'designer', avatar: 'עמ', title: 'מעצב גרפי', color: '#ea580c' },
-  { id: 'u5', name: 'שירה פרץ', role: 'designer', avatar: 'שפ', title: 'מעצבת דיגיטל', color: '#16a34a' },
-  { id: 'u6', name: 'דניאל ביטון', role: 'designer', avatar: 'דב', title: 'מעצב דפוס', color: '#2563eb' },
+  { id: 'u1', name: 'מיכל אברהם', role: 'approver', avatar: 'מא', title: 'מנהלת מחלקת עיצוב', color: '#8a5a44' },
+  { id: 'u2', name: 'יוסי כהן', role: 'approver', avatar: 'יכ', title: 'גרפיקאי בכיר', color: '#3f6b6a' },
+  { id: 'u3', name: 'נועה לוי', role: 'designer', avatar: 'נל', title: 'מעצבת גרפית', color: '#9d4b5c' },
+  { id: 'u4', name: 'עומר מזרחי', role: 'designer', avatar: 'עמ', title: 'מעצב גרפי', color: '#7a6a3a' },
+  { id: 'u5', name: 'שירה פרץ', role: 'designer', avatar: 'שפ', title: 'מעצבת דיגיטל', color: '#4f6b45' },
+  { id: 'u6', name: 'דניאל ביטון', role: 'designer', avatar: 'דב', title: 'מעצב דפוס', color: '#4a5a7a' },
 ];
 
 export const projects: Project[] = [
-  { id: 'p1', name: 'קמפיין ראש השנה', color: '#dc2626' },
-  { id: 'p2', name: 'קטלוג מוצרים 2027', color: '#2563eb' },
-  { id: 'p3', name: 'שילוט תערוכה', color: '#d97706' },
-  { id: 'p4', name: 'השקת קו "גדות פרו"', color: '#059669' },
+  { id: 'p1', name: 'קמפיין ראש השנה', color: '#c2410c' },
+  { id: 'p2', name: 'קטלוג מוצרים 2027', color: '#3b6ea5' },
+  { id: 'p3', name: 'שילוט תערוכה', color: '#b08a2e' },
+  { id: 'p4', name: 'השקת קו "גדות פרו"', color: '#4d7c5a' },
 ];
 
 interface SeedComment {

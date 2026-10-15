@@ -4,34 +4,36 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Heebo', 'system-ui', 'sans-serif'],
+        sans: ['"IBM Plex Sans Hebrew"', '"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       colors: {
-        brand: {
-          50: '#f1f3ff',
-          100: '#e3e7ff',
-          200: '#c9d0fe',
-          300: '#a5affc',
-          400: '#7f87f6',
-          500: '#5f63ee',
-          600: '#4c4be0',
-          700: '#3f3cc4',
-          800: '#35349e',
-          900: '#2f307d',
+        // צבע הדגשה יחיד: כתום-אות, לסימוני הערות ולאינדיקציות בלבד
+        signal: {
+          50: '#fff4ee',
+          100: '#ffe4d4',
+          200: '#ffc6a6',
+          400: '#ff7a42',
+          500: '#f45a16',
+          600: '#d9480b',
+          700: '#b3390c',
         },
+        ink: '#1c1917',
         stage: {
-          DEFAULT: '#18181b',
-          deep: '#111113',
-          line: '#2a2a2f',
+          DEFAULT: '#1a1918',
+          deep: '#141312',
+          line: '#2b2927',
         },
       },
       boxShadow: {
-        card: '0 1px 2px rgba(24,24,27,0.04), 0 1px 3px rgba(24,24,27,0.06)',
-        lift: '0 4px 12px -2px rgba(24,24,27,0.08), 0 2px 4px -2px rgba(24,24,27,0.06)',
-        pop: '0 16px 40px -12px rgba(24,24,27,0.25), 0 4px 12px -4px rgba(24,24,27,0.1)',
+        xs: '0 1px 2px rgba(28,25,23,0.05)',
+        pop: '0 12px 32px -8px rgba(28,25,23,0.22), 0 2px 6px -2px rgba(28,25,23,0.08)',
       },
-      borderRadius: {
-        xl: '0.875rem',
+      fontSize: {
+        '2xs': ['11px', '16px'],
+        xs: ['12px', '16px'],
+        sm: ['13px', '20px'],
+        base: ['14px', '22px'],
       },
     },
   },

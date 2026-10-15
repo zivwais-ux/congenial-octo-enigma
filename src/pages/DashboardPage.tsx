@@ -1,20 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlarmClock, ArrowLeft, CheckCircle2, Clock3, Flame, Inbox, MessageSquare, Plus, Upload, Wrench, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import type { Item, Status } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { applyFilters, EMPTY_FILTERS, ItemFilters, type Filters, type View } from '../components/items/ItemFilters';
 import { ItemCard, useItemMeta } from '../components/items/ItemCard';
 import { ItemList } from '../components/items/ItemRow';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Avatar } from '../components/ui/Avatar';
-import { DueLabel } from '../components/ui/DueLabel';
-import { FileThumb } from '../components/ui/FileThumb';
-import { StatusBadge } from '../components/ui/StatusBadge';
 import { useLocalPref } from '../hooks/useLocalPref';
-import { daysUntil, urgency } from '../lib/dates';
-import { STATUS_META } from '../lib/status';
-import { comments, firstName, greeting, todayLabel, works } from '../lib/copy';
+import { daysUntil, dueLabel, urgency } from '../lib/dates';
+import { works } from '../lib/copy';
 
 const byDue = (a: Item, b: Item) => a.dueDate.localeCompare(b.dueDate);
 const byRecent = (a: Item, b: Item) => b.createdAt.localeCompare(a.createdAt);
@@ -25,7 +20,7 @@ function countByStatus(items: Item[]) {
   return c;
 }
 
-/** מסנן משותף, שמסתנכרן עם ?project= מהסרגל הצדדי */
+/** סינון שמסתנכרן עם ?project= מהסרגל הצדדי */
 function useDashboardFilters() {
   const [params, setParams] = useSearchParams();
   const project = params.get('project') ?? 'all';
@@ -49,7 +44,7 @@ function ApproverDashboard() {
   const { state, currentUser } = useStore();
   const lookups = useLookups();
   const [filters, setFilters] = useDashboardFilters();
-  const [view, setView] = useLocalPref<View>('gadot:view', 'grid');
+  const [view, setView] = useLocalPref<View>('gadot:view.v3', 'list');
 
   const mine = state.items.filter((i) => i.approverId === currentUser.id);
   const waiting = mine.filter((i) => i.status === 'pending').sort(byDue);
@@ -67,80 +62,66 @@ function ApproverDashboard() {
   ).sort(byRecent);
 
   const summary = (() => {
-    if (waiting.length === 0) return 'אין כרגע עבודות שמחכות להחלטה שלך. הכל זורם.';
-    if (waiting.length === 1)
-      return `עבודה אחת מחכה להחלטה שלך${overdue.length ? ', והיא כבר באיחור' : soon.length ? ', עם דדליין קרוב' : ''}.`;
-    const tail = overdue.length
-      ? `, ${overdue.length === 1 ? 'אחת מהן כבר באיחור' : `${overdue.length} מהן כבר באיחור`}`
-      : soon.length
-        ? `, ${soon.length === 1 ? 'אחת מהן' : `${soon.length} מהן`} עם דדליין קרוב`
-        : '';
+    if (waiting.length === 0) return 'אין כרגע עבודות שמחכות להחלטה שלך.';
+    if (waiting.length === 1) return `עבודה אחת מחכה להחלטה שלך${overdue.length ? ', והיא כבר באיחור' : soon.length ? ', עם דדליין קרוב' : ''}.`;
+    const tail = overdue.length ? `, ${overdue.length === 1 ? 'אחת מהן באיחור' : `${overdue.length} מהן באיחור`}` : '';
     return `${waiting.length} עבודות מחכות להחלטה שלך${tail}.`;
   })();
 
-  const focus = filters.projectId === 'all' ? waiting[0] : undefined;
-
   return (
     <Page>
-      <Hero title={`${greeting()}, ${firstName(currentUser.name)}`} subtitle={summary} />
+      <PageHeader title="תור האישורים" subtitle={summary} />
 
-      {focus && (
-        <FocusCard
-          item={focus}
-          eyebrow={urgency(focus.dueDate) === 'overdue' ? 'הכי דחוף עכשיו · באיחור' : 'הבא בתור'}
-          cta="פתיחה וסקירה"
-          show="designer"
-        />
-      )}
+      <Metrics
+        items={[
+          { label: 'מחכות להחלטה', value: waiting.length },
+          { label: 'באיחור', value: overdue.length, alert: overdue.length > 0 },
+          { label: 'דדליין ב-48 שעות', value: soon.length },
+          { label: 'אושרו על ידך', value: approvedByMe },
+        ]}
+      />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={<Inbox className="h-4 w-4" />} label="מחכות להחלטה שלך" value={waiting.length} tone="sky" />
-        <Stat icon={<Flame className="h-4 w-4" />} label="באיחור" value={overdue.length} tone="rose" hint={overdue.length ? 'כדאי להתחיל מהן' : 'אין איחורים'} />
-        <Stat icon={<Clock3 className="h-4 w-4" />} label="דדליין ב-48 שעות" value={soon.length} tone="amber" />
-        <Stat icon={<CheckCircle2 className="h-4 w-4" />} label="אישרת עד היום" value={approvedByMe} tone="emerald" />
-      </div>
+      {overdue[0] && filters.projectId === 'all' && <Attention item={overdue[0]} label="באיחור" tone="red" cta="לסקירה" />}
 
-      <ItemFilters value={filters} onChange={setFilters} counts={countByStatus(state.items)} view={view} onView={setView} />
+      <div>
+        <ItemFilters value={filters} onChange={setFilters} counts={countByStatus(state.items)} view={view} onView={setView} />
 
-      <Section title="ממתין להחלטה שלך" count={fWaiting.length} dot="pending" hint="ממוין לפי דדליין, הדחוף ראשון">
-        {fWaiting.length ? (
-          <Items items={fWaiting} view={view} />
-        ) : (
-          <EmptyState
-            icon={<CheckCircle2 className="h-6 w-6" />}
-            title={waiting.length ? 'אין התאמות לסינון' : 'התור שלך ריק'}
-            text={waiting.length ? 'נסו לנקות את הסינון.' : 'כשמעצב ישלח לך עבודה, היא תופיע כאן, יחד עם התראה.'}
-          />
-        )}
-      </Section>
-
-      {fWithDesigners.length > 0 && (
-        <Section title="חזרו למעצבים לתיקונים" count={fWithDesigners.length} dot="changes" hint="מחכות לגרסה חדשה">
-          <Items items={fWithDesigners} view={view} />
+        <Section title="מחכה להחלטה שלך" count={fWaiting.length}>
+          {fWaiting.length ? (
+            <Items items={fWaiting} view={view} />
+          ) : (
+            <EmptyState title={waiting.length ? 'אין התאמות לסינון' : 'התור ריק'} text={waiting.length ? 'נסו לנקות את הסינון.' : 'כשמעצב ישלח לך עבודה, היא תופיע כאן ותישלח אליך התראה.'} />
+          )}
         </Section>
-      )}
 
-      <Section title="כל העבודות במחלקה" count={fOthers.length} hint="כולל עבודות שמאשרים אחרים מטפלים בהן">
-        {fOthers.length ? <Items items={fOthers} view={view} /> : <EmptyState icon={<Inbox className="h-6 w-6" />} title="לא נמצאו עבודות" text="נסו לשנות את הסינון." />}
-      </Section>
+        {fWithDesigners.length > 0 && (
+          <Section title="אצל המעצבים לתיקונים" count={fWithDesigners.length}>
+            <Items items={fWithDesigners} view={view} />
+          </Section>
+        )}
+
+        <Section title="כל העבודות במחלקה" count={fOthers.length}>
+          {fOthers.length ? <Items items={fOthers} view={view} /> : <EmptyState title="לא נמצאו עבודות" text="נסו לשנות את הסינון." />}
+        </Section>
+      </div>
     </Page>
   );
 }
 
 /* ───────────── מעצב ───────────── */
 
-const DESIGNER_GROUPS: { status: Status; title: string; hint: string }[] = [
-  { status: 'changes', title: 'חזרו אליך לתיקונים', hint: 'ההערות מחכות על התמונה' },
-  { status: 'pending', title: 'אצל המאשרים', hint: 'נשלחו, מחכות להחלטה' },
-  { status: 'rejected', title: 'נדחו', hint: 'כדאי לעבור על הנימוק' },
-  { status: 'approved', title: 'אושרו לאחרונה', hint: 'נשמרו בארכיון' },
+const DESIGNER_GROUPS: { status: Status; title: string }[] = [
+  { status: 'changes', title: 'חזרו אליך לתיקונים' },
+  { status: 'pending', title: 'אצל המאשרים' },
+  { status: 'rejected', title: 'נדחו' },
+  { status: 'approved', title: 'אושרו לאחרונה' },
 ];
 
 function DesignerDashboard() {
   const { state, currentUser } = useStore();
   const lookups = useLookups();
   const [filters, setFilters] = useDashboardFilters();
-  const [view, setView] = useLocalPref<View>('gadot:view', 'grid');
+  const [view, setView] = useLocalPref<View>('gadot:view.v3', 'list');
 
   const mine = state.items.filter((i) => i.designerId === currentUser.id);
   const filtered = applyFilters(mine, filters, lookups);
@@ -149,70 +130,72 @@ function DesignerDashboard() {
 
   const summary =
     counts.changes > 0
-      ? `${counts.changes === 1 ? 'עבודה אחת חזרה' : `${counts.changes} עבודות חזרו`} אליך עם הערות. ${counts.pending ? `עוד ${works(counts.pending)} אצל המאשרים.` : ''}`
+      ? `${counts.changes === 1 ? 'עבודה אחת חזרה' : `${counts.changes} עבודות חזרו`} אליך עם הערות${counts.pending ? `, ועוד ${works(counts.pending)} אצל המאשרים` : ''}.`
       : counts.pending > 0
-        ? `${works(counts.pending)} אצל המאשרים, ואין כרגע מה לתקן.`
-        : 'אין עבודות פתוחות. זה זמן טוב להעלות משהו חדש.';
+        ? `${works(counts.pending)} אצל המאשרים. אין כרגע מה לתקן.`
+        : 'אין עבודות פתוחות.';
 
   return (
     <Page>
-      <Hero
-        title={`${greeting()}, ${firstName(currentUser.name)}`}
+      <PageHeader
+        title="העבודות שלי"
         subtitle={summary}
         action={
-          <Link
-            to="/upload"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
-          >
+          <Link to="/upload" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3.5 text-base font-medium text-white transition hover:bg-stone-800">
             <Plus className="h-4 w-4" />
             העלאת עבודה
           </Link>
         }
       />
 
-      {toFix[0] && filters.projectId === 'all' && <FocusCard item={toFix[0]} eyebrow="ממתין לך" cta="לצפייה בהערות" show="approver" />}
+      <Metrics
+        items={[
+          { label: 'חזרו לתיקונים', value: counts.changes, alert: counts.changes > 0, alertTone: 'amber' },
+          { label: 'אצל המאשרים', value: counts.pending },
+          { label: 'אושרו', value: counts.approved },
+          { label: 'נדחו', value: counts.rejected },
+        ]}
+      />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={<Wrench className="h-4 w-4" />} label="חזרו לתיקונים" value={counts.changes} tone="amber" />
-        <Stat icon={<AlarmClock className="h-4 w-4" />} label="אצל המאשרים" value={counts.pending} tone="sky" />
-        <Stat icon={<CheckCircle2 className="h-4 w-4" />} label="אושרו" value={counts.approved} tone="emerald" />
-        <Stat icon={<XCircle className="h-4 w-4" />} label="נדחו" value={counts.rejected} tone="rose" />
+      {toFix[0] && filters.projectId === 'all' && <Attention item={toFix[0]} label="מחכה לך" tone="amber" cta="להערות" show="approver" />}
+
+      <div>
+        <ItemFilters value={filters} onChange={setFilters} counts={counts} view={view} onView={setView} />
+
+        {filtered.length === 0 && (
+          <div className="pt-6">
+            <EmptyState
+              title={mine.length ? 'אין התאמות לסינון' : 'עוד לא העלית עבודות'}
+              text={mine.length ? 'נסו לנקות את הסינון.' : 'מעלים קובץ, בוחרים מאשר, וזהו. בלי מייל ובלי קבצים מצורפים.'}
+              action={
+                !mine.length && (
+                  <Link to="/upload" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3.5 text-base font-medium text-white">
+                    <Plus className="h-4 w-4" />
+                    העלאת עבודה
+                  </Link>
+                )
+              }
+            />
+          </div>
+        )}
+
+        {DESIGNER_GROUPS.map((g) => {
+          const list = filtered.filter((i) => i.status === g.status).sort(g.status === 'approved' ? byRecent : byDue);
+          if (!list.length) return null;
+          const shown = g.status === 'approved' ? list.slice(0, 4) : list;
+          return (
+            <Section key={g.status} title={g.title} count={list.length}>
+              <Items items={shown} view={view} show="approver" />
+              {list.length > shown.length && (
+                <Link to="/archive" className="mt-3 inline-flex items-center gap-1 text-sm text-stone-500 transition hover:text-ink">
+                  לכל העבודות שאושרו
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </Section>
+          );
+        })}
       </div>
-
-      <ItemFilters value={filters} onChange={setFilters} counts={counts} view={view} onView={setView} />
-
-      {filtered.length === 0 && (
-        <EmptyState
-          icon={<Upload className="h-6 w-6" />}
-          title={mine.length ? 'אין התאמות לסינון' : 'עוד לא העלית עבודות'}
-          text={mine.length ? 'נסו לנקות את הסינון.' : 'מעלים קובץ, בוחרים מאשר, וזהו. בלי מייל ובלי קבצים מצורפים.'}
-          action={
-            !mine.length && (
-              <Link to="/upload" className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white">
-                <Plus className="h-4 w-4" />
-                העלאת עבודה ראשונה
-              </Link>
-            )
-          }
-        />
-      )}
-
-      {DESIGNER_GROUPS.map((g) => {
-        const list = filtered.filter((i) => i.status === g.status).sort(g.status === 'approved' ? byRecent : byDue);
-        if (!list.length) return null;
-        const shown = g.status === 'approved' ? list.slice(0, 4) : list;
-        return (
-          <Section key={g.status} title={g.title} count={list.length} hint={g.hint} dot={g.status}>
-            <Items items={shown} view={view} show="approver" />
-            {list.length > shown.length && (
-              <Link to="/archive" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
-                לכל {list.length} העבודות שאושרו, בארכיון
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            )}
-          </Section>
-        );
-      })}
     </Page>
   );
 }
@@ -220,105 +203,75 @@ function DesignerDashboard() {
 /* ───────────── רכיבי עזר ───────────── */
 
 export function Page({ children }: { children: ReactNode }) {
-  return <div className="anim-rise mx-auto flex max-w-[88rem] flex-col gap-7 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">{children}</div>;
+  return <div className="anim-rise mx-auto flex max-w-[76rem] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</div>;
 }
 
-function Hero({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) {
+export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <div className="text-xs font-medium text-zinc-400">{todayLabel()}</div>
-        <h1 className="mt-1 text-[26px] font-extrabold tracking-tight text-zinc-900 sm:text-3xl">{title}</h1>
-        <p className="mt-1.5 max-w-2xl text-[15px] text-zinc-500">{subtitle}</p>
+      <div className="min-w-0">
+        <h1 className="text-[22px] font-semibold leading-8 sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-1 text-base text-stone-500">{subtitle}</p>}
       </div>
       {action}
     </div>
   );
 }
 
-function FocusCard({ item, eyebrow, cta, show }: { item: Item; eyebrow: string; cta: string; show: 'designer' | 'approver' }) {
-  const { latest, project, designer, approver, openComments, overdue } = useItemMeta(item);
+export function Metrics({ items }: { items: { label: string; value: number; alert?: boolean; alertTone?: 'red' | 'amber' }[] }) {
+  return (
+    <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-stone-200/80 bg-white sm:grid-cols-4">
+      {items.map((m, i) => (
+        <div
+          key={m.label}
+          className={`px-4 py-3.5 sm:px-5 ${i % 2 === 1 ? 'border-s border-stone-200/80' : ''} ${i >= 2 ? 'border-t border-stone-200/80 sm:border-t-0' : ''} ${i === 2 ? 'sm:border-s' : ''}`}
+        >
+          <dt className="text-sm text-stone-500">{m.label}</dt>
+          <dd className={`num mt-1 text-[26px] font-medium leading-8 ${m.alert ? (m.alertTone === 'amber' ? 'text-amber-700' : 'text-red-700') : 'text-ink'}`}>{m.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Attention({ item, label, tone, cta, show = 'designer' }: { item: Item; label: string; tone: 'red' | 'amber'; cta: string; show?: 'designer' | 'approver' }) {
+  const { latest, designer, approver, openComments } = useItemMeta(item);
   const person = show === 'designer' ? designer : approver;
   return (
     <Link
       to={`/item/${item.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-card transition hover:shadow-lift sm:flex-row"
+      className="group flex items-center gap-3 rounded-lg border border-stone-200/80 bg-white py-2.5 pe-3 ps-3 transition hover:border-stone-300 sm:gap-4 sm:ps-4"
       data-testid="focus-card"
     >
-      <div className="stage-grid flex items-center justify-center p-4 sm:w-72 sm:shrink-0">
-        <FileThumb version={latest} className="h-40 w-full transition duration-300 group-hover:scale-[1.03] sm:h-36" />
-      </div>
-      <div className="flex flex-1 flex-col justify-center gap-3 p-5 sm:p-6">
-        <span className={`inline-flex w-fit items-center gap-1.5 text-xs font-bold ${overdue ? 'text-rose-600' : 'text-brand-700'}`}>
-          {overdue ? <Flame className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />}
-          {eyebrow}
+      <span className={`flex items-center gap-1.5 text-sm font-medium ${tone === 'red' ? 'text-red-700' : 'text-amber-700'}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${tone === 'red' ? 'bg-red-600' : 'bg-amber-500'}`} />
+        {label}
+      </span>
+      <span className="h-4 w-px bg-stone-200" />
+      <span className="min-w-0 flex-1 truncate text-base">
+        <span className="font-medium text-ink">{item.title}</span>
+        <span className="hidden text-stone-500 sm:inline">
+          {' · '}
+          {person?.name}
+          {' · '}
+          {show === 'designer' ? dueLabel(item.dueDate) : openComments ? `${openComments} הערות פתוחות` : `גרסה ${latest.number}`}
         </span>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-zinc-900">{item.title}</h2>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-zinc-500">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-[3px]" style={{ backgroundColor: project?.color }} />
-              {project?.name}
-            </span>
-            {person && (
-              <span className="flex items-center gap-1.5">
-                <Avatar user={person} size="xs" ring={false} />
-                {person.name}
-              </span>
-            )}
-            <span dir="ltr">v{latest.number}</span>
-            {openComments > 0 && (
-              <span className="flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" />
-                {comments(openComments)}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <StatusBadge status={item.status} />
-          <DueLabel dueDate={item.dueDate} status={item.status} />
-        </div>
-      </div>
-      <div className="flex items-center border-t border-zinc-100 p-4 sm:border-0 sm:p-6">
-        <span className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition group-hover:bg-zinc-800 sm:w-auto">
-          {cta}
-          <ArrowLeft className="h-4 w-4 transition group-hover:-translate-x-0.5" />
-        </span>
-      </div>
+      </span>
+      <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-ink">
+        {cta}
+        <ArrowLeft className="h-3.5 w-3.5 transition group-hover:-translate-x-0.5" />
+      </span>
     </Link>
   );
 }
 
-const TONES = {
-  sky: 'bg-sky-50 text-sky-600 ring-sky-100',
-  rose: 'bg-rose-50 text-rose-600 ring-rose-100',
-  amber: 'bg-amber-50 text-amber-600 ring-amber-100',
-  emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-};
-
-function Stat({ icon, label, value, tone, hint }: { icon: ReactNode; label: string; value: number; tone: keyof typeof TONES; hint?: string }) {
+function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-card">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium leading-tight text-zinc-500">{label}</span>
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ${TONES[tone]}`}>{icon}</span>
-      </div>
-      <div className="mt-2 text-[28px] font-bold leading-none tracking-tight text-zinc-900">{value}</div>
-      {hint && <div className="mt-1.5 truncate text-xs text-zinc-400">{hint}</div>}
-    </div>
-  );
-}
-
-function Section({ title, count, hint, dot, children }: { title: string; count: number; hint?: string; dot?: Status; children: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-3 flex items-baseline gap-2">
-        {dot && <span className={`h-2 w-2 -translate-y-px rounded-full ${STATUS_META[dot].dot}`} />}
-        <h2 className="text-base font-bold text-zinc-900">{title}</h2>
-        <span className="text-sm font-medium text-zinc-400">{count}</span>
-        {hint && <span className="hidden text-xs text-zinc-400 sm:inline">· {hint}</span>}
-      </div>
+    <section className="pt-7">
+      <h2 className="mb-3 flex items-baseline gap-2 text-base font-semibold">
+        {title}
+        <span className="num text-sm font-normal text-stone-400">{count}</span>
+      </h2>
       {children}
     </section>
   );
@@ -327,7 +280,7 @@ function Section({ title, count, hint, dot, children }: { title: string; count: 
 function Items({ items, view, show = 'designer' }: { items: Item[]; view: View; show?: 'designer' | 'approver' }) {
   if (view === 'list') return <ItemList items={items} show={show} />;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-3 xl:grid-cols-4">
       {items.map((i) => (
         <ItemCard key={i.id} item={i} show={show} />
       ))}

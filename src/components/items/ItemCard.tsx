@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
 import type { Item } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { urgency } from '../../lib/dates';
@@ -24,51 +23,41 @@ export function useItemMeta(item: Item) {
 
 /** כרטיס עבודה בתצוגת רשת. show – את מי להציג: המעצב (למאשר) או המאשר (למעצב) */
 export function ItemCard({ item, show = 'designer' }: { item: Item; show?: 'designer' | 'approver' }) {
-  const { latest, project, designer, approver, openComments, overdue } = useItemMeta(item);
+  const { latest, project, designer, approver, openComments } = useItemMeta(item);
   const person = show === 'designer' ? designer : approver;
 
   return (
-    <Link
-      to={`/item/${item.id}`}
-      data-testid="item-card"
-      className={`group flex flex-col overflow-hidden rounded-xl border bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-lift ${
-        overdue ? 'border-rose-200 ring-1 ring-rose-100' : 'border-zinc-200 hover:border-zinc-300'
-      }`}
-    >
-      <div className="checker relative">
-        <FileThumb version={latest} className="aspect-[4/3] p-3 transition duration-300 group-hover:scale-[1.02]" />
-        <span className="absolute start-2 top-2 rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-bold text-zinc-700 shadow-sm ring-1 ring-zinc-900/5" dir="ltr">
+    <Link to={`/item/${item.id}`} data-testid="item-card" className="group flex flex-col">
+      <div className="relative overflow-hidden rounded-lg border border-stone-200/80 bg-stone-100/70 transition group-hover:border-stone-300">
+        <FileThumb version={latest} className="aspect-[4/3] p-4 transition duration-300 group-hover:scale-[1.015]" />
+        <span className="mono absolute start-2 top-2 rounded bg-white/90 px-1.5 py-0.5 text-stone-600 shadow-xs" dir="ltr">
           v{latest.number}
         </span>
-        {overdue && <span className="absolute end-2 top-2 rounded-md bg-rose-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">באיחור</span>}
+        {openComments > 0 && (
+          <span className="num absolute end-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-500 px-1.5 text-[11px] font-medium text-white" title="הערות פתוחות">
+            {openComments}
+          </span>
+        )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 border-t border-zinc-100 p-3">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500">
-          <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ backgroundColor: project?.color }} />
+      <div className="px-0.5 pt-2.5">
+        <h3 className="truncate text-base font-medium leading-6 text-ink">{item.title}</h3>
+        <div className="mt-0.5 flex items-center gap-1.5 text-sm text-stone-500">
+          <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: project?.color }} />
           <span className="truncate">{project?.name}</span>
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">{item.title}</h3>
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-1">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <StatusBadge status={item.status} />
-          <DueLabel dueDate={item.dueDate} status={item.status} compact />
+          <DueLabel dueDate={item.dueDate} status={item.status} />
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-zinc-100 pt-2.5">
-          {person && (
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-zinc-600">
-              <Avatar user={person} size="xs" ring={false} />
-              <span className="truncate">
-                {show === 'approver' && <span className="text-zinc-400">אצל </span>}
-                {person.name}
-              </span>
+        {person && (
+          <div className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
+            <Avatar user={person} size="xs" />
+            <span className="truncate">
+              {show === 'approver' ? 'אצל ' : ''}
+              {person.name}
             </span>
-          )}
-          {openComments > 0 && (
-            <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-zinc-500" title="הערות פתוחות על הגרסה הנוכחית">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {openComments}
-            </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Link>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, CornerDownLeft, LayoutGrid, Plus, Search, Sparkles, UserRound } from 'lucide-react';
+import { Archive, CornerDownLeft, Inbox, ListChecks, Plus, Search, UserRound } from 'lucide-react';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { useSwitchUser } from '../../hooks/useSwitchUser';
 import { FileThumb } from '../ui/FileThumb';
@@ -42,11 +42,11 @@ export function CommandPalette() {
 
     const actions: Entry[] = ([
       ...(currentUser.role === 'designer'
-        ? [{ id: 'a-upload', group: 'פעולות', label: 'העלאת עבודה חדשה', icon: <Plus className="h-4 w-4" />, run: go('/upload') }]
+        ? [{ id: 'a-upload', group: 'פעולות', label: 'העלאת עבודה חדשה', icon: <Plus className="h-4 w-4" strokeWidth={1.75} />, run: go('/upload') }]
         : []),
-      { id: 'a-home', group: 'פעולות', label: currentUser.role === 'approver' ? 'לאישור שלי' : 'העבודות שלי', icon: <LayoutGrid className="h-4 w-4" />, run: go('/') },
-      { id: 'a-archive', group: 'פעולות', label: 'ארכיון עבודות מאושרות', icon: <Archive className="h-4 w-4" />, run: go('/archive') },
-      { id: 'a-guide', group: 'פעולות', label: 'מדריך ההדגמה', icon: <Sparkles className="h-4 w-4" />, run: () => setGuideOpen(true) },
+      { id: 'a-home', group: 'פעולות', label: currentUser.role === 'approver' ? 'תור האישורים' : 'העבודות שלי', icon: <Inbox className="h-4 w-4" strokeWidth={1.75} />, run: go('/') },
+      { id: 'a-archive', group: 'פעולות', label: 'ארכיון עבודות מאושרות', icon: <Archive className="h-4 w-4" strokeWidth={1.75} />, run: go('/archive') },
+      { id: 'a-guide', group: 'פעולות', label: 'תסריט ההדגמה', icon: <ListChecks className="h-4 w-4" strokeWidth={1.75} />, run: () => setGuideOpen(true) },
       ...state.users
         .filter((u) => u.id !== currentUser.id)
         .map((u) => ({
@@ -54,7 +54,7 @@ export function CommandPalette() {
           group: 'צפייה בתור',
           label: u.name,
           hint: u.title,
-          icon: <UserRound className="h-4 w-4" />,
+          icon: <UserRound className="h-4 w-4" strokeWidth={1.75} />,
           run: () => switchUser(u.id),
         })),
     ] as Entry[]).filter((e) => match(`${e.label} ${e.hint ?? ''}`));
@@ -68,7 +68,7 @@ export function CommandPalette() {
         group: needle ? 'עבודות' : 'עבודות אחרונות',
         label: i.title,
         hint: `${projectById.get(i.projectId)?.name} · ${userById.get(i.designerId)?.name}`,
-        icon: <FileThumb version={i.versions[i.versions.length - 1]} className="checker h-7 w-9 rounded ring-1 ring-zinc-200" />,
+        icon: <FileThumb version={i.versions[i.versions.length - 1]} className="h-7 w-9 rounded border border-stone-200 bg-stone-50" />,
         right: <StatusBadge status={i.status} />,
         run: go(`/item/${i.id}`),
       }));
@@ -90,15 +90,15 @@ export function CommandPalette() {
 
   let lastGroup = '';
   return (
-    <div className="anim-fade fixed inset-0 z-[75] flex items-start justify-center bg-zinc-950/40 p-3 pt-[12vh] backdrop-blur-[2px]" onMouseDown={close}>
+    <div className="anim-fade fixed inset-0 z-[75] flex items-start justify-center bg-stone-950/25 p-3 pt-[12vh]" onMouseDown={close}>
       <div
-        className="anim-pop w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-pop"
+        className="anim-pop w-full max-w-[560px] overflow-hidden rounded-xl border border-stone-200 bg-white shadow-pop"
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="חיפוש מהיר"
       >
-        <div className="flex items-center gap-3 border-b border-zinc-100 px-4">
-          <Search className="h-5 w-5 text-zinc-400" />
+        <div className="flex items-center gap-3 border-b border-stone-200/80 px-4">
+          <Search className="h-4 w-4 text-stone-400" />
           <input
             autoFocus
             value={q}
@@ -117,38 +117,38 @@ export function CommandPalette() {
               }
             }}
             placeholder="חיפוש עבודה, פרויקט, מעצב או פעולה…"
-            className="h-14 flex-1 bg-transparent text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-12 flex-1 bg-transparent text-[15px] text-ink placeholder:text-stone-400 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
             data-testid="palette-input"
           />
           <Kbd>Esc</Kbd>
         </div>
         <div ref={listRef} className="scroll-thin max-h-[55vh] overflow-y-auto p-2">
-          {entries.length === 0 && <div className="px-3 py-10 text-center text-sm text-zinc-500">לא נמצא דבר עבור "{q}"</div>}
+          {entries.length === 0 && <div className="px-3 py-10 text-center text-sm text-stone-500">לא נמצא דבר עבור "{q}"</div>}
           {entries.map((e, i) => {
             const header = e.group !== lastGroup ? e.group : null;
             lastGroup = e.group;
             return (
               <div key={e.id}>
-                {header && <div className="px-3 pb-1 pt-3 text-[11px] font-semibold text-zinc-400">{header}</div>}
+                {header && <div className="px-2.5 pb-1 pt-3 text-xs text-stone-400">{header}</div>}
                 <button
                   data-idx={i}
                   onMouseMove={() => setIndex(i)}
                   onClick={() => run(e)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-start transition ${i === index ? 'bg-zinc-100' : ''}`}
+                  className={`flex w-full items-center gap-3 rounded-md px-2.5 py-1.5 text-start ${i === index ? 'bg-stone-100' : ''}`}
                 >
-                  <span className="flex h-7 w-9 shrink-0 items-center justify-center text-zinc-500">{e.icon}</span>
+                  <span className="flex h-7 w-9 shrink-0 items-center justify-center text-stone-500">{e.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-zinc-900">{e.label}</span>
-                    {e.hint && <span className="block truncate text-xs text-zinc-500">{e.hint}</span>}
+                    <span className="block truncate text-sm text-ink">{e.label}</span>
+                    {e.hint && <span className="block truncate text-xs text-stone-500">{e.hint}</span>}
                   </span>
                   {e.right}
-                  {i === index && <CornerDownLeft className="h-4 w-4 shrink-0 text-zinc-400" />}
+                  {i === index && <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-stone-400" />}
                 </button>
               </div>
             );
           })}
         </div>
-        <div className="flex items-center gap-4 border-t border-zinc-100 bg-zinc-50/80 px-4 py-2 text-[11px] text-zinc-500">
+        <div className="hidden items-center gap-4 border-t border-stone-200/80 bg-stone-50 px-4 py-2 text-xs text-stone-500 sm:flex">
           <span className="flex items-center gap-1">
             <Kbd>↑</Kbd>
             <Kbd>↓</Kbd>

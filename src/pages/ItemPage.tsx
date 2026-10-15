@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, Clock3, Columns2, Download, Eye, EyeOff, FileQuestion, Layers, Upload, Wrench, XCircle } from 'lucide-react';
+import { Columns2, Download, Eye, EyeOff, Upload } from 'lucide-react';
 import type { Item, Pin, User } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { addComment, decide, toggleResolved } from '../store/actions';
@@ -19,7 +19,7 @@ import { CompareView } from '../components/viewer/CompareView';
 import { NewVersionModal } from '../components/upload/NewVersionModal';
 import { downloadSource } from '../lib/download';
 import { channelOf } from '../lib/status';
-import { formatDate, formatDateTime } from '../lib/dates';
+import { formatDate } from '../lib/dates';
 import { firstName } from '../lib/copy';
 
 export function ItemPage() {
@@ -30,12 +30,11 @@ export function ItemPage() {
     return (
       <div className="mx-auto max-w-lg px-4 py-16">
         <EmptyState
-          icon={<FileQuestion className="h-6 w-6" />}
           title="העבודה לא נמצאה"
-          text="ייתכן שההדגמה אופסה מאז שנפתח הקישור."
+          text="ייתכן שההדגמה אופסה מאז שהקישור נפתח."
           action={
-            <Link to="/" className="inline-flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white">
-              חזרה לסקירה
+            <Link to="/" className="inline-flex h-9 items-center rounded-md bg-ink px-3.5 text-base font-medium text-white">
+              חזרה לרשימה
             </Link>
           }
         />
@@ -47,7 +46,7 @@ export function ItemPage() {
 
 function ItemView({ item }: { item: Item }) {
   const { state, update, currentUser } = useStore();
-  const { userById, projectById } = useLookups();
+  const { userById } = useLookups();
   const toast = useToast();
 
   const latest = item.versions[item.versions.length - 1];
@@ -58,7 +57,7 @@ function ItemView({ item }: { item: Item }) {
   const [showPins, setShowPins] = useState(true);
   const [compare, setCompare] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   // גרסה חדשה עלתה – עוברים אליה
   useEffect(() => {
@@ -79,7 +78,6 @@ function ItemView({ item }: { item: Item }) {
   const isLatest = version.id === latest.id;
   // קובץ המקור של הגרסה הנצפית, ואם אין לה – האחרון שהועלה
   const sourceVersion = version.sourceFileName ? version : [...item.versions].reverse().find((v) => v.sourceFileName);
-  const project = projectById.get(item.projectId);
   const designer = userById.get(item.designerId)!;
   const approver = userById.get(item.approverId)!;
 
@@ -101,6 +99,7 @@ function ItemView({ item }: { item: Item }) {
   const onAddPin = (pin: Pin, text: string) => {
     update((s) => addComment(s, item.id, version.id, text, pin));
     setShowPins(true);
+    setTab('comments');
   };
 
   const onDecide = (d: Decision, text: string) => {
@@ -112,57 +111,68 @@ function ItemView({ item }: { item: Item }) {
   const selectFromList = (id: string | null) => {
     setActiveId(id);
     setShowPins(true);
-    if (id && window.innerWidth < 1024) previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (id && window.innerWidth < 1024) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  return (
-    <div className={`anim-rise mx-auto max-w-[100rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-6 ${canDecide ? 'pb-32 lg:pb-6' : ''}`}>
-      {/* כותרת */}
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 lg:hidden">
-            <span className="h-2 w-2 rounded-[3px]" style={{ backgroundColor: project?.color }} />
-            {project?.name}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 lg:mt-0">
-            <h1 className="text-[22px] font-extrabold tracking-tight text-zinc-900 sm:text-2xl">{item.title}</h1>
-            <StatusBadge status={item.status} size="md" />
-          </div>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-zinc-500">
-            <Person label="עיצוב" user={designer} />
-            <Person label="אישור" user={approver} />
-            <DueLabel dueDate={item.dueDate} status={item.status} />
-            <span className="flex items-center gap-1">
-              <Layers className="h-3.5 w-3.5" />
-              {item.versions.length === 1 ? 'גרסה אחת' : `${item.versions.length} גרסאות`}
-            </span>
-          </div>
-        </div>
-        {sourceVersion && (
-          <Button
-            variant="secondary"
-            className="self-start lg:self-auto"
-            icon={<Download className="h-4 w-4" />}
-            onClick={() => {
-              void downloadSource(sourceVersion);
-              toast(`ההורדה של ${sourceVersion.sourceFileName} התחילה`, { tone: 'info' });
-            }}
-            data-testid="download-source"
-          >
-            <span className="max-w-[14rem] truncate" dir="ltr">
-              {sourceVersion.sourceFileName}
-            </span>
-            {sourceVersion.id !== version.id && <span className="text-xs font-normal text-zinc-400">מגרסה {sourceVersion.number}</span>}
-          </Button>
-        )}
-      </div>
+  const toolBtn = 'flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] transition';
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
+  return (
+    <div className={`anim-fade lg:flex lg:h-[calc(100vh-53px)] ${canDecide ? 'pb-[88px] lg:pb-0' : ''}`}>
+      {/* עמודה ראשית */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="border-b border-stone-200/80 bg-white px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <h1 className="text-[19px] font-semibold leading-7">{item.title}</h1>
+                <StatusBadge status={item.status} />
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-stone-500">
+                <Person user={designer} label="עיצוב" />
+                <Person user={approver} label="אישור" />
+                <span className="flex items-center gap-1.5">
+                  <span className="text-stone-400">דדליין</span>
+                  <DueLabel dueDate={item.dueDate} status={item.status} />
+                </span>
+              </div>
+            </div>
+            {sourceVersion && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                icon={<Download className="h-3.5 w-3.5" />}
+                onClick={() => {
+                  void downloadSource(sourceVersion);
+                  toast(`ההורדה של ${sourceVersion.sourceFileName} התחילה`, { tone: 'info' });
+                }}
+                data-testid="download-source"
+              >
+                <span className="max-w-[12rem] truncate text-sm font-normal" dir="ltr">
+                  {sourceVersion.sourceFileName}
+                </span>
+              </Button>
+            )}
+          </div>
+        </header>
+
         {/* במה */}
-        <div ref={previewRef} className="min-w-0 scroll-mt-20">
-          <div className="overflow-hidden rounded-2xl bg-stage shadow-lift ring-1 ring-zinc-900/10">
-            {!compare && (
-              <div className="flex flex-wrap items-center gap-2 border-b border-stage-line bg-stage-deep px-3 py-2.5">
+        <div ref={stageRef} className="flex min-h-0 flex-1 scroll-mt-14 flex-col bg-stage">
+          {compare ? (
+            <>
+              <div className="flex h-11 shrink-0 items-center justify-between border-b border-stage-line bg-stage-deep px-3">
+                <span className="text-[13px] text-stone-200">השוואת גרסאות</span>
+                <button onClick={() => setCompare(false)} className={`${toolBtn} text-stone-300 hover:bg-white/10 hover:text-white`} data-testid="compare-toggle">
+                  סגירה
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto">
+                <CompareView item={item} comments={itemComments} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex h-11 shrink-0 items-center gap-2 border-b border-stage-line bg-stage-deep px-3">
                 <VersionTabs
                   versions={item.versions}
                   value={version.id}
@@ -171,103 +181,88 @@ function ItemView({ item }: { item: Item }) {
                     setActiveId(null);
                   }}
                 />
-                {!isLatest && <span className="rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-semibold text-amber-300">גרסה קודמת · לצפייה בלבד</span>}
-                <div className="ms-auto flex items-center gap-1">
+                {!isLatest && <span className="hidden text-[12px] text-amber-300/90 sm:inline">גרסה קודמת, לצפייה בלבד</span>}
+                <div className="ms-auto flex items-center gap-0.5">
                   {pinned.length > 0 && (
-                    <StageBtn onClick={() => setShowPins((v) => !v)} active={!showPins} label={showPins ? 'הסתרת סימונים' : 'הצגת סימונים'}>
-                      {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    </StageBtn>
+                    <button
+                      onClick={() => setShowPins((v) => !v)}
+                      className={`${toolBtn} ${showPins ? 'text-stone-400 hover:bg-white/[0.06] hover:text-white' : 'bg-white/[0.12] text-white'}`}
+                      title={showPins ? 'הסתרת הסימונים' : 'הצגת הסימונים'}
+                    >
+                      {showPins ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">סימונים</span>
+                    </button>
                   )}
                   {item.versions.length > 1 && (
-                    <StageBtn onClick={() => setCompare(true)} label="השוואת גרסאות" wide testId="compare-toggle">
-                      <Columns2 className="h-4 w-4" />
+                    <button onClick={() => setCompare(true)} className={`${toolBtn} text-stone-400 hover:bg-white/[0.06] hover:text-white`} data-testid="compare-toggle">
+                      <Columns2 className="h-3.5 w-3.5" />
                       השוואה
-                    </StageBtn>
+                    </button>
                   )}
                 </div>
               </div>
-            )}
-            {compare ? (
-              <div>
-                <div className="flex items-center justify-between border-b border-stage-line bg-stage-deep px-3 py-2">
-                  <span className="text-[13px] font-semibold text-zinc-100">השוואת גרסאות</span>
-                  <StageBtn onClick={() => setCompare(false)} label="חזרה לתצוגה רגילה" wide testId="compare-toggle">
-                    סגירת השוואה
-                  </StageBtn>
-                </div>
-                <CompareView item={item} comments={itemComments} />
+              <div className="min-h-0 flex-1 overflow-auto">
+                <PreviewPane
+                  version={version}
+                  pins={showPins ? pinned : []}
+                  activeId={activeId}
+                  onSelect={setActiveId}
+                  onAddPin={canPin ? onAddPin : undefined}
+                  showResolved={showResolved}
+                  className="min-h-full"
+                />
               </div>
-            ) : (
-              <PreviewPane
-                version={version}
-                pins={showPins ? pinned : []}
-                activeId={activeId}
-                onSelect={setActiveId}
-                onAddPin={canPin ? onAddPin : undefined}
-                showResolved={showResolved}
-              />
-            )}
-          </div>
-
-          {!compare && version.note && (
-            <div className="mt-3 flex gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
-              <Avatar user={designer} size="sm" ring={false} />
-              <div className="min-w-0 text-sm">
-                <div className="text-xs text-zinc-500">
-                  <span className="font-semibold text-zinc-800">{designer.name}</span> · הערה לגרסה {version.number} · {formatDateTime(version.uploadedAt)}
-                </div>
-                <p className="mt-0.5 leading-relaxed text-zinc-700">{version.note}</p>
-              </div>
-            </div>
+            </>
           )}
         </div>
-
-        {/* פאנל צד */}
-        <aside className="flex min-h-[460px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-card lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-10.75rem)] lg:min-h-[520px]">
-          {canDecide && <DecisionPanel onDecide={onDecide} openPinCount={openPins} designerName={designer.name} itemTitle={item.title} versionNumber={latest.number} />}
-          <StatusBanner
-            item={item}
-            isDesigner={isDesigner}
-            isApprover={isApprover}
-            lastDecisionText={lastDecision?.text}
-            lastDecisionAt={lastDecision?.at}
-            approverName={approver.name}
-            designerName={designer.name}
-            onNewVersion={() => setNewVersionOpen(true)}
-          />
-
-          <div className="flex gap-1 border-b border-zinc-200 px-3" role="tablist">
-            <TabBtn active={tab === 'comments'} onClick={() => setTab('comments')}>
-              הערות
-              {openCount > 0 && <span className="rounded-full bg-rose-50 px-1.5 text-[11px] font-bold text-rose-600">{openCount}</span>}
-            </TabBtn>
-            <TabBtn active={tab === 'timeline'} onClick={() => setTab('timeline')}>
-              פעילות
-              <span className="text-[11px] text-zinc-400">{item.events.length}</span>
-            </TabBtn>
-            <span className="ms-auto self-center text-[11px] text-zinc-400">גרסה {version.number}</span>
-          </div>
-
-          {tab === 'comments' ? (
-            <CommentPanel
-              pinned={pinned}
-              general={general}
-              activeId={activeId}
-              onSelect={selectFromList}
-              onToggleResolved={(id) => update((s) => toggleResolved(s, id))}
-              onAddGeneral={(text) => update((s) => addComment(s, item.id, version.id, text))}
-              showResolved={showResolved}
-              onShowResolved={setShowResolved}
-              olderCount={olderCount}
-              canPin={canPin}
-            />
-          ) : (
-            <div className="scroll-thin flex-1 overflow-y-auto">
-              <Timeline item={item} />
-            </div>
-          )}
-        </aside>
       </div>
+
+      {/* פאנל צד */}
+      <aside className="flex min-h-[480px] flex-col border-stone-200/80 bg-white lg:h-full lg:w-[360px] lg:shrink-0 lg:border-s xl:w-[380px]">
+        {canDecide && <DecisionPanel onDecide={onDecide} openPinCount={openPins} designerName={designer.name} itemTitle={item.title} versionNumber={latest.number} />}
+        <StatusNote
+          item={item}
+          isDesigner={isDesigner}
+          isApprover={isApprover}
+          lastDecisionText={lastDecision?.text}
+          lastDecisionAt={lastDecision?.at}
+          approverName={approver.name}
+          designerName={designer.name}
+          onNewVersion={() => setNewVersionOpen(true)}
+        />
+
+        <div className="flex h-11 shrink-0 items-center gap-5 border-b border-stone-200/80 px-4" role="tablist">
+          <TabBtn active={tab === 'comments'} onClick={() => setTab('comments')}>
+            הערות
+            {openCount > 0 && <span className="num text-xs text-signal-600">{openCount}</span>}
+          </TabBtn>
+          <TabBtn active={tab === 'timeline'} onClick={() => setTab('timeline')}>
+            פעילות
+          </TabBtn>
+          <span className="ms-auto text-xs text-stone-400">גרסה {version.number}</span>
+        </div>
+
+        {tab === 'comments' ? (
+          <CommentPanel
+            version={version}
+            designer={designer}
+            pinned={pinned}
+            general={general}
+            activeId={activeId}
+            onSelect={selectFromList}
+            onToggleResolved={(id) => update((s) => toggleResolved(s, id))}
+            onAddGeneral={(text) => update((s) => addComment(s, item.id, version.id, text))}
+            showResolved={showResolved}
+            onShowResolved={setShowResolved}
+            olderCount={olderCount}
+            canPin={canPin}
+          />
+        ) : (
+          <div className="scroll-thin flex-1 overflow-y-auto">
+            <Timeline item={item} />
+          </div>
+        )}
+      </aside>
       {isDesigner && <NewVersionModal item={item} open={newVersionOpen} onClose={() => setNewVersionOpen(false)} />}
     </div>
   );
@@ -276,26 +271,10 @@ function ItemView({ item }: { item: Item }) {
 function Person({ label, user }: { label: string; user: User }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="text-zinc-400">{label}</span>
-      <Avatar user={user} size="xs" ring={false} />
-      <span className="font-medium text-zinc-700">{user.name}</span>
+      <span className="text-stone-400">{label}</span>
+      <Avatar user={user} size="xs" />
+      <span className="text-stone-700">{user.name}</span>
     </span>
-  );
-}
-
-function StageBtn({ onClick, label, active, wide, testId, children }: { onClick: () => void; label: string; active?: boolean; wide?: boolean; testId?: string; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      data-testid={testId}
-      className={`flex h-8 items-center justify-center gap-1.5 rounded-md text-[13px] font-semibold transition ${wide ? 'px-2.5' : 'w-8'} ${
-        active ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/10 hover:text-white'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -305,16 +284,15 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`-mb-px flex items-center gap-1.5 border-b-2 px-2 py-3 text-sm font-semibold transition ${
-        active ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-800'
-      }`}
+      className={`-mb-px flex h-11 items-center gap-1.5 border-b text-sm transition-colors ${active ? 'border-ink font-medium text-ink' : 'border-transparent text-stone-500 hover:text-ink'}`}
     >
       {children}
     </button>
   );
 }
 
-function StatusBanner({
+/** מצב העבודה מנקודת המבט של המשתמש הנוכחי */
+function StatusNote({
   item,
   isDesigner,
   isApprover,
@@ -333,56 +311,47 @@ function StatusBanner({
   designerName: string;
   onNewVersion: () => void;
 }) {
-  const quote = lastDecisionText && <p className="mt-1.5 text-[13px] leading-relaxed opacity-90">"{lastDecisionText}"</p>;
+  const quote = lastDecisionText && <p className="mt-2 border-s-2 border-stone-200 ps-3 text-base leading-6 text-stone-700">{lastDecisionText}</p>;
+  const wrap = (dot: string, title: string, children?: React.ReactNode, testId?: string) => (
+    <div className="border-b border-stone-200/80 px-4 py-4" data-testid={testId}>
+      <div className="flex items-center gap-2 text-sm font-medium text-ink">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+
   if (item.status === 'pending') {
     if (isApprover) return null;
-    return (
-      <Banner tone="border-sky-100 bg-sky-50 text-sky-900" icon={<Clock3 className="h-4 w-4 text-sky-600" />} title={`ממתין להחלטה של ${approverName}`}>
-        <p className="mt-1 text-[13px] text-sky-800/80">{isDesigner ? 'ברגע שתהיה החלטה, תגיע אליך התראה.' : `גרסה ${item.versions.length} נשלחה לאישור.`}</p>
-      </Banner>
-    );
+    return wrap('bg-sky-600', `ממתין להחלטה של ${approverName}`, <p className="mt-1 text-sm text-stone-500">{isDesigner ? 'כשתהיה החלטה, תגיע אליך התראה.' : `גרסה ${item.versions.length} נשלחה לאישור.`}</p>);
   }
   if (item.status === 'changes') {
-    return (
-      <Banner tone="border-amber-200 bg-amber-50 text-amber-950" icon={<Wrench className="h-4 w-4 text-amber-600" />} title={isDesigner ? `התקבלו הערות מ${approverName}` : `הוחזר ל${firstName(designerName)} לתיקונים`} testId="changes-banner">
+    return wrap(
+      'bg-amber-500',
+      isDesigner ? `הערות מ${approverName}` : `הוחזר ל${firstName(designerName)} לתיקונים`,
+      <>
         {quote}
         {isDesigner && (
           <Button variant="primary" block className="mt-3" icon={<Upload className="h-4 w-4" />} onClick={onNewVersion} data-testid="upload-version-btn">
             העלאת גרסה {item.versions.length + 1}
           </Button>
         )}
-      </Banner>
+      </>,
+      'changes-banner',
     );
   }
   if (item.status === 'approved') {
-    return (
-      <Banner
-        tone="border-emerald-100 bg-emerald-50 text-emerald-950"
-        icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-        title={`אושר${lastDecisionAt ? ` ב-${formatDate(lastDecisionAt)}` : ''} · ${approverName}`}
-      >
+    return wrap(
+      'bg-emerald-600',
+      `אושר${lastDecisionAt ? ` ב-${formatDate(lastDecisionAt)}` : ''} על ידי ${approverName}`,
+      <>
         {quote}
-        <Link to="/archive" className="mt-2 inline-block text-[13px] font-semibold text-emerald-700 hover:underline">
-          נשמר בארכיון עם כל הגרסאות ←
+        <Link to="/archive" className="mt-2 inline-block text-sm text-stone-500 underline decoration-stone-300 underline-offset-4 transition hover:text-ink">
+          נשמר בארכיון
         </Link>
-      </Banner>
+      </>,
     );
   }
-  return (
-    <Banner tone="border-rose-100 bg-rose-50 text-rose-950" icon={<XCircle className="h-4 w-4 text-rose-600" />} title={`נדחה · ${approverName}`}>
-      {quote}
-    </Banner>
-  );
-}
-
-function Banner({ tone, icon, title, children, testId }: { tone: string; icon: React.ReactNode; title: string; children?: React.ReactNode; testId?: string }) {
-  return (
-    <div className={`border-b px-4 py-3.5 ${tone}`} data-testid={testId}>
-      <div className="flex items-center gap-2 text-sm font-bold">
-        {icon}
-        {title}
-      </div>
-      {children}
-    </div>
-  );
+  return wrap('bg-red-600', `נדחה על ידי ${approverName}`, quote);
 }

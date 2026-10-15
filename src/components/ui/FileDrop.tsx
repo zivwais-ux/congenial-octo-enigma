@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { FileImage, FileText, Paperclip, RefreshCw, UploadCloud, X } from 'lucide-react';
+import { FileText, Paperclip, X } from 'lucide-react';
 
 export function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -63,36 +63,32 @@ export function FileDrop({ file, onChange, accept, validate, title, hint, showPr
   );
 
   if (file) {
-    const isImg = file.type.startsWith('image/');
     return (
-      <div className="anim-fade overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-card">
+      <div className="anim-fade overflow-hidden rounded-lg border border-stone-200/80 bg-white">
         {showPreview && (
-          <div className="stage-grid flex h-60 items-center justify-center p-4">
+          <div className="stage-bg flex h-56 items-center justify-center p-5">
             {preview ? (
-              <img src={preview} alt="" className="max-h-full max-w-full rounded-sm object-contain shadow-[0_12px_30px_-8px_rgba(0,0,0,0.6)]" />
+              <img src={preview} alt="" className="max-h-full max-w-full object-contain shadow-[0_16px_40px_-16px_rgba(0,0,0,0.7)]" />
             ) : (
-              <div className="flex flex-col items-center gap-2 text-zinc-400">
-                <FileText className="h-10 w-10" strokeWidth={1.5} />
-                <span className="text-xs">תצוגה מקדימה של PDF תופיע במסך העבודה</span>
+              <div className="flex flex-col items-center gap-2 text-stone-500">
+                <FileText className="h-8 w-8" strokeWidth={1.25} />
+                <span className="text-xs">תצוגת ה-PDF תופיע במסך העבודה</span>
               </div>
             )}
           </div>
         )}
         <div className="flex items-center gap-3 px-3 py-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500">
-            {isImg ? <FileImage className="h-4 w-4" /> : showPreview ? <FileText className="h-4 w-4" /> : <Paperclip className="h-4 w-4" />}
-          </span>
+          <Paperclip className="h-4 w-4 shrink-0 text-stone-400" />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-zinc-900" dir="auto">
+            <div className="truncate text-sm text-ink" dir="ltr">
               {file.name}
             </div>
-            <div className="text-xs text-zinc-500">{formatSize(file.size)} · מוכן לשליחה</div>
+            <div className="text-xs text-stone-500">{formatSize(file.size)}</div>
           </div>
-          <button type="button" onClick={() => input.current?.click()} className="flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <button type="button" onClick={() => input.current?.click()} className="h-7 rounded-md px-2 text-sm text-stone-600 transition hover:bg-stone-100 hover:text-ink">
             החלפה
           </button>
-          <button type="button" onClick={() => onChange(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700" aria-label="הסרת הקובץ">
+          <button type="button" onClick={() => onChange(null)} className="flex h-7 w-7 items-center justify-center rounded-md text-stone-400 transition hover:bg-stone-100 hover:text-ink" aria-label="הסרת הקובץ">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -112,21 +108,22 @@ export function FileDrop({ file, onChange, accept, validate, title, hint, showPr
         }}
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
-        className={`group flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition ${compact ? 'px-4 py-5' : 'px-6 py-14'} ${
-          over ? 'scale-[1.01] border-brand-500 bg-brand-50' : 'border-zinc-300 bg-white hover:border-zinc-400 hover:bg-zinc-50/80'
+        className={`flex w-full flex-col items-center justify-center rounded-lg border border-dashed text-center transition-colors ${compact ? 'px-4 py-5' : 'px-6 py-12'} ${
+          over ? 'border-ink bg-stone-100' : 'border-stone-300 bg-white hover:border-stone-400 hover:bg-stone-50/60'
         }`}
       >
-        <span
-          className={`flex items-center justify-center rounded-2xl transition ${compact ? 'h-9 w-9' : 'h-14 w-14'} ${
-            over ? 'bg-brand-600 text-white' : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-900 group-hover:text-white'
-          }`}
-        >
-          <UploadCloud className={compact ? 'h-4 w-4' : 'h-6 w-6'} />
+        <span className="text-base text-ink">
+          {over ? (
+            'אפשר לשחרר'
+          ) : (
+            <>
+              {title} <span className="text-stone-400">או</span> <span className="underline decoration-stone-300 underline-offset-4">בחירה מהמחשב</span>
+            </>
+          )}
         </span>
-        <span className={`font-semibold text-zinc-900 ${compact ? 'text-sm' : 'text-[15px]'}`}>{over ? 'אפשר לשחרר' : title}</span>
-        <span className="text-xs text-zinc-500">{hint}</span>
+        <span className="mt-1 text-sm text-stone-500">{hint}</span>
       </button>
-      {error && <p className="mt-2 text-xs font-medium text-rose-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
       {hidden}
     </div>
   );

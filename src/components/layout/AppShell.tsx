@@ -31,11 +31,11 @@ export function AppShell() {
   }, [setPaletteOpen]);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-stone-50">
       <Sidebar />
-      <div className="lg:ps-64">
+      <div className="lg:ps-60">
         <TopBar />
-        <main className={onItem ? 'pb-6' : 'pb-28 lg:pb-12'}>
+        <main className={onItem ? '' : pathname === '/upload' ? 'pb-[57px] lg:pb-0' : 'pb-28 lg:pb-16'}>
           <Outlet />
         </main>
       </div>

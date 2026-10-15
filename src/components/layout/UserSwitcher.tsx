@@ -10,7 +10,7 @@ import type { Role } from '../../types';
 
 const ROLE_LABEL: Record<Role, string> = { approver: 'מאשרים', designer: 'מעצבים' };
 
-/** "החלפת משתמש" לצורכי הדגמה. variant=sidebar – כרטיס בתחתית הסרגל; compact – אווטאר בלבד */
+/** "החלפת משתמש" לצורכי הדגמה. sidebar – שורה בתחתית הסרגל; compact – אווטאר בלבד */
 export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'compact' }) {
   const { state, currentUser, resetDemo } = useStore();
   const [open, setOpen] = useState(false);
@@ -30,7 +30,7 @@ export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'c
     resetDemo();
     setOpen(false);
     navigate('/');
-    toast('ההדגמה אופסה. אפשר להתחיל מההתחלה', { tone: 'info' });
+    toast('ההדגמה אופסה', { tone: 'info' });
   };
 
   return (
@@ -39,47 +39,45 @@ export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'c
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-zinc-200 bg-white p-2 text-start shadow-sm shadow-zinc-900/[0.02] transition hover:border-zinc-300"
+          className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-start transition hover:bg-stone-100"
           aria-haspopup="menu"
           aria-expanded={open}
           data-testid="user-switcher"
         >
-          <Avatar user={currentUser} ring={false} />
+          <Avatar user={currentUser} />
           <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-sm font-semibold text-zinc-900">{currentUser.name}</span>
-            <span className="block truncate text-[11px] text-zinc-500">{currentUser.title}</span>
+            <span className="block truncate text-sm font-medium text-ink">{currentUser.name}</span>
+            <span className="block truncate text-xs text-stone-500">{currentUser.title}</span>
           </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-zinc-400" />
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-stone-400" />
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center rounded-full p-0.5 transition hover:ring-4 hover:ring-zinc-100"
+          className="flex rounded-full transition hover:opacity-90"
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label={`משתמש נוכחי: ${currentUser.name}. החלפת משתמש`}
           data-testid="user-switcher"
         >
-          <Avatar user={currentUser} ring={false} />
+          <Avatar user={currentUser} />
         </button>
       )}
 
       {open && (
         <div
           role="menu"
-          className={`anim-pop absolute z-50 w-[19rem] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-pop ${
-            variant === 'sidebar' ? 'bottom-full start-0 mb-2' : 'end-0 top-full mt-2'
-          }`}
+          className={`anim-pop absolute z-50 w-72 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-pop ${variant === 'sidebar' ? 'bottom-full start-0 mb-1.5' : 'end-0 top-full mt-2'}`}
         >
-          <div className="border-b border-zinc-100 px-4 py-3">
-            <div className="text-[13px] font-semibold text-zinc-900">צפייה בתור…</div>
-            <div className="mt-0.5 text-[11px] leading-snug text-zinc-500">בהדגמה עוברים בין משתמשים כדי לראות את שני הצדדים. במערכת האמיתית כל אחד נכנס עם החשבון שלו.</div>
+          <div className="border-b border-stone-100 px-3.5 py-3">
+            <div className="text-sm font-medium">צפייה בתור</div>
+            <div className="mt-0.5 text-xs text-stone-500">בהדגמה עוברים בין משתמשים כדי לראות את שני הצדדים.</div>
           </div>
-          <div className="max-h-[50vh] overflow-y-auto py-1">
+          <div className="max-h-[52vh] overflow-y-auto py-1">
             {(['approver', 'designer'] as Role[]).map((role) => (
               <div key={role} className="py-1">
-                <div className="px-4 pb-1 pt-1.5 text-[11px] font-semibold text-zinc-400">{ROLE_LABEL[role]}</div>
+                <div className="px-3.5 pb-1 text-xs text-stone-400">{ROLE_LABEL[role]}</div>
                 {state.users
                   .filter((u) => u.role === role)
                   .map((u) => {
@@ -93,35 +91,28 @@ export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'c
                           switchUser(u.id);
                           setOpen(false);
                         }}
-                        className={`flex w-full items-center gap-2.5 px-4 py-2 text-start transition ${selected ? 'bg-brand-50/60' : 'hover:bg-zinc-50'}`}
+                        className="flex w-full items-center gap-2.5 px-3.5 py-1.5 text-start transition hover:bg-stone-50"
                       >
-                        <Avatar user={u} ring={false} />
+                        <Avatar user={u} size="sm" />
                         <span className="min-w-0 flex-1 leading-tight">
-                          <span className="block text-sm font-medium text-zinc-900">{u.name}</span>
-                          <span className="block text-[11px] text-zinc-500">{u.title}</span>
+                          <span className="block text-sm text-ink">{u.name}</span>
+                          <span className="block text-xs text-stone-500">{u.title}</span>
                         </span>
                         {count > 0 && (
-                          <span
-                            className={`rounded-full px-1.5 py-px text-[11px] font-bold ${role === 'approver' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-800'}`}
-                            title={role === 'approver' ? 'מחכות להחלטה' : 'חזרו לתיקונים'}
-                          >
+                          <span className={`num text-xs ${role === 'approver' ? 'text-stone-500' : 'text-amber-700'}`} title={role === 'approver' ? 'מחכות להחלטה' : 'חזרו לתיקונים'}>
                             {count}
                           </span>
                         )}
-                        {selected && <Check className="h-4 w-4 text-brand-600" />}
+                        <Check className={`h-4 w-4 text-ink ${selected ? '' : 'invisible'}`} />
                       </button>
                     );
                   })}
               </div>
             ))}
           </div>
-          <button
-            onClick={onReset}
-            className="flex w-full items-center gap-2 border-t border-zinc-100 px-4 py-3 text-[13px] font-medium text-zinc-600 transition hover:bg-rose-50 hover:text-rose-700"
-          >
-            <RotateCcw className="h-4 w-4" />
-            איפוס הדגמה
-            <span className="ms-auto text-[11px] font-normal text-zinc-400">חזרה לנתוני ההתחלה</span>
+          <button onClick={onReset} className="flex w-full items-center gap-2 border-t border-stone-100 px-3.5 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50 hover:text-ink">
+            <RotateCcw className="h-3.5 w-3.5" />
+            איפוס ההדגמה
           </button>
         </div>
       )}

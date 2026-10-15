@@ -7,9 +7,8 @@ export function Modal({
   onClose,
   title,
   description,
-  icon,
   children,
-  width = 'max-w-md',
+  width = 'max-w-[440px]',
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,26 +32,24 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="anim-fade fixed inset-0 z-[70] flex items-end justify-center bg-zinc-950/40 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={onClose}>
+    <div className="anim-fade fixed inset-0 z-[70] flex items-end justify-center bg-stone-950/30 sm:items-center sm:p-4" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`anim-sheet w-full ${width} max-h-[92vh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop sm:rounded-2xl sm:p-6`}
+        className={`anim-sheet w-full ${width} max-h-[92vh] overflow-y-auto rounded-t-xl bg-white pb-[env(safe-area-inset-bottom)] shadow-pop sm:rounded-xl`}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-zinc-200 sm:hidden" />
-        <div className="mb-5 flex items-start gap-3">
-          {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
+        <div className="flex items-start gap-4 px-5 pb-3 pt-5">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold leading-snug text-zinc-900">{title}</h2>
-            {description && <div className="mt-1 text-sm leading-relaxed text-zinc-500">{description}</div>}
+            <h2 className="text-[16px] font-semibold leading-6">{title}</h2>
+            {description && <div className="mt-1 text-sm text-stone-500">{description}</div>}
           </div>
-          <button onClick={onClose} className="-m-1 rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700" aria-label="סגירה">
-            <X className="h-5 w-5" />
+          <button onClick={onClose} className="-me-1.5 -mt-1 rounded-md p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-ink" aria-label="סגירה">
+            <X className="h-4 w-4" />
           </button>
         </div>
-        {children}
+        <div className="px-5 pb-5">{children}</div>
       </div>
     </div>
   );

@@ -26,15 +26,15 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
   const canSwipe = !isPdf(before) && !isPdf(after);
 
   const picker = (value: string, onChange: (v: string) => void, label: string) => (
-    <label className="flex items-center gap-2 text-xs text-zinc-400">
+    <label className="flex items-center gap-2 text-xs text-stone-500">
       {label}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[13px] font-semibold text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        className="h-7 rounded-md border border-white/10 bg-white/[0.06] px-2 text-[12px] text-stone-100 focus:outline-none"
       >
         {item.versions.map((x) => (
-          <option key={x.id} value={x.id} className="text-zinc-900">
+          <option key={x.id} value={x.id} className="text-ink">
             גרסה {x.number} · {formatDate(x.uploadedAt)}
           </option>
         ))}
@@ -44,8 +44,8 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-stage-line bg-stage-deep px-3 py-2.5">
-        <div className="flex rounded-lg bg-white/[0.06] p-0.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-stage-line bg-stage-deep px-3 py-2">
+        <div className="flex rounded-md bg-white/[0.06] p-0.5">
           {(
             [
               ['side', Columns2, 'זו לצד זו'],
@@ -56,8 +56,8 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
               key={m}
               onClick={() => setMode(m)}
               disabled={m === 'swipe' && !canSwipe}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-semibold transition disabled:opacity-30 ${
-                mode === m ? 'bg-white text-zinc-900' : 'text-zinc-400 hover:text-zinc-100'
+              className={`flex h-6 items-center gap-1.5 rounded px-2 text-[12px] transition disabled:opacity-30 ${
+                mode === m ? 'bg-white/[0.14] text-white' : 'text-stone-400 hover:text-stone-100'
               }`}
               data-testid={`compare-mode-${m}`}
             >
@@ -69,7 +69,7 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
         {picker(beforeId, setBeforeId, 'לפני')}
         {picker(afterId, setAfterId, 'אחרי')}
         {mode === 'side' && (
-          <label className="ms-auto flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
+          <label className="ms-auto flex cursor-pointer items-center gap-2 text-xs text-stone-500">
             <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} className="h-3.5 w-3.5 accent-white" />
             הערות מסומנות
           </label>
@@ -80,7 +80,7 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
         <div className="grid gap-px bg-stage-line md:grid-cols-2">
           {[before, after].map((v, i) => (
             <div key={i} className="relative" data-testid="compare-side">
-              <span className="absolute start-3 top-3 z-10 rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+              <span className="absolute start-3 top-3 z-10 rounded bg-black/50 px-1.5 py-0.5 text-[11px] text-stone-100">
                 {i === 0 ? 'לפני' : 'אחרי'} · גרסה {v.number}
               </span>
               <PreviewPane
@@ -89,9 +89,9 @@ export function CompareView({ item, comments }: { item: Item; comments: Comment[
                 activeId={active}
                 onSelect={setActive}
                 showResolved
-                maxH="max-h-[46vh] lg:max-h-[calc(100vh-21rem)]"
+                maxH="max-h-[40vh] lg:max-h-[calc(100vh-21rem)]"
               />
-              {v.note && <p className="border-t border-stage-line bg-stage-deep px-4 py-2.5 text-xs leading-relaxed text-zinc-400">{v.note}</p>}
+              {v.note && <p className="border-t border-stage-line bg-stage-deep px-4 py-2.5 text-xs leading-5 text-stone-400">{v.note}</p>}
             </div>
           ))}
         </div>
@@ -130,7 +130,7 @@ function Swipe({ before, after }: { before: Version; after: Version }) {
         data-testid="swipe"
       >
         {/* "לפני" ברקע, "אחרי" נחשף מימין לקו – כמו בכיוון הקריאה */}
-        {a && <img src={a} alt="" className="block h-auto max-h-[56vh] w-auto max-w-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.6)] lg:max-h-[calc(100vh-20rem)]" draggable={false} />}
+        {a && <img src={a} alt="" className="block h-auto max-h-[52vh] w-auto max-w-full shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)] lg:max-h-[calc(100vh-19rem)]" draggable={false} />}
         {b && (
           <img
             src={b}
@@ -141,14 +141,14 @@ function Swipe({ before, after }: { before: Version; after: Version }) {
           />
         )}
         <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.2)]" style={{ left: `${pos}%` }}>
-          <span className="absolute top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-zinc-700 shadow-lg">
+          <span className="absolute top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-stone-700 shadow-lg">
             <SplitSquareHorizontal className="h-4 w-4" />
           </span>
         </div>
-        <span className="pointer-events-none absolute start-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white">אחרי · גרסה {after.number}</span>
-        <span className="pointer-events-none absolute end-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white">לפני · גרסה {before.number}</span>
+        <span className="pointer-events-none absolute start-2 top-2 rounded bg-black/50 px-1.5 py-0.5 text-[11px] text-white">אחרי · גרסה {after.number}</span>
+        <span className="pointer-events-none absolute end-2 top-2 rounded bg-black/50 px-1.5 py-0.5 text-[11px] text-white">לפני · גרסה {before.number}</span>
       </div>
-      <p className="mt-4 text-xs text-zinc-400">גררו את הקו כדי לחשוף את ההבדלים</p>
+      <p className="mt-5 text-xs text-stone-500">גוררים את הקו כדי לחשוף את ההבדלים</p>
     </Stage>
   );
 }
