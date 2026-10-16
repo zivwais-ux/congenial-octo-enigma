@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AppState, User } from '../types';
 import { AppStateSchema, describeIssues } from '../schema';
 import { createSeed, SCHEMA_VERSION } from '../data/seed';
@@ -56,6 +56,18 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+/** מחזיר אוסף למצבו לפני פעולה: מסיר מה שנוסף, משחזר מה שנמחק או שונה. שאר השינויים נשמרים */
+function revert<T extends { id: string }>(before: T[], after: T[], current: T[]): T[] {
+  const beforeById = new Map(before.map((x) => [x.id, x]));
+  const afterById = new Map(after.map((x) => [x.id, x]));
+  const added = new Set(after.filter((x) => !beforeById.has(x.id)).map((x) => x.id));
+  const changed = new Set(after.filter((x) => beforeById.has(x.id) && beforeById.get(x.id) !== x).map((x) => x.id));
+  const removed = before.filter((x) => !afterById.has(x.id));
+  const kept = current.filter((x) => !added.has(x.id)).map((x) => (changed.has(x.id) ? beforeById.get(x.id)! : x));
+  const keptIds = new Set(kept.map((x) => x.id));
+  return [...kept, ...removed.filter((x) => !keptIds.has(x.id))];
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [initial] = useState(load);
   const [state, setState] = useState<AppState>(initial.state);
@@ -75,17 +87,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((fn: (s: AppState) => AppState) => setState(fn), []);
 
+  // מצביע למצב העדכני, כדי לחשב את "לפני" ו"אחרי" של פעולה הפיכה בדיוק פעם אחת
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   const updateUndoable = useCallback((fn: (s: AppState) => AppState) => {
-    let before: AppState | null = null;
-    setState((s) => {
-      before = s;
-      return fn(s);
-    });
-    // ביטול מחזיר את הנתונים למצב שלפני הפעולה, אבל משאיר את המשתמש שנבחר עכשיו
-    return () => {
-      const snapshot = before;
-      if (snapshot) setState((cur) => ({ ...snapshot, currentUserId: cur.currentUserId }));
-    };
+    const before = stateRef.current;
+    const after = fn(before);
+    stateRef.current = after;
+    setState(after);
+    // ביטול ממוקד: מחזיר רק את הרשומות שהפעולה הזו שינתה, כך שפעולות שבוצעו אחריה לא נפגעות
+    return () =>
+      setState((cur) => ({
+        ...cur,
+        items: revert(before.items, after.items, cur.items),
+        comments: revert(before.comments, after.comments, cur.comments),
+        notifications: revert(before.notifications, after.notifications, cur.notifications),
+      }));
   }, []);
 
   const resetDemo = useCallback(() => {

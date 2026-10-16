@@ -10,10 +10,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useLocalPref } from '../hooks/useLocalPref';
 import { daysUntil, dueLabel, urgency } from '../lib/dates';
 import { firstName, greeting, todayLabel, works } from '../lib/copy';
+import { approverQueue, byDue } from '../lib/queue';
 import { TONE, type Tone } from '../lib/status';
 import { IconTile } from '../components/ui/IconTile';
 
-const byDue = (a: Item, b: Item) => a.dueDate.localeCompare(b.dueDate);
 const byRecent = (a: Item, b: Item) => b.createdAt.localeCompare(a.createdAt);
 
 function countByStatus(items: Item[]) {
@@ -49,7 +49,7 @@ function ApproverDashboard() {
   const [view, setView] = useLocalPref<View>('gadot:view.v3', 'list');
 
   const mine = state.items.filter((i) => i.approverId === currentUser.id);
-  const waiting = mine.filter((i) => i.status === 'pending').sort(byDue);
+  const waiting = approverQueue(state, currentUser.id);
   const overdue = waiting.filter((i) => urgency(i.dueDate) === 'overdue');
   const soon = waiting.filter((i) => daysUntil(i.dueDate) >= 0 && daysUntil(i.dueDate) <= 2);
   const withDesigners = mine.filter((i) => i.status === 'changes');

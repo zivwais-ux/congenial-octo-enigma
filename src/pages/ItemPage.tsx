@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Activity, Check, Clock3, Columns2, Download, Eye, EyeOff, MessageSquare, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
 import { IconTile } from '../components/ui/IconTile';
 import { ProjectChip } from '../components/ui/ProjectChip';
@@ -24,6 +24,9 @@ import { downloadSource } from '../lib/download';
 import { channelOf } from '../lib/status';
 import { formatDate } from '../lib/dates';
 import { firstName } from '../lib/copy';
+import { approverQueue } from '../lib/queue';
+import { useUI } from '../components/layout/UIContext';
+import { NextUp, QueueNav } from '../components/viewer/ReviewQueue';
 
 export function ItemPage() {
   const { id } = useParams();
@@ -61,6 +64,9 @@ function ItemView({ item }: { item: Item }) {
   const [compare, setCompare] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const [decided, setDecided] = useState<Decision | null>(null);
+  const { reviewTally, recordDecision } = useUI();
+  const navigate = useNavigate();
 
   // גרסה חדשה עלתה – עוברים אליה
   useEffect(() => {
@@ -100,6 +106,11 @@ function ItemView({ item }: { item: Item }) {
   const open = item.status === 'pending' || item.status === 'changes';
   const canPin = isLatest && open;
   const canDecide = isApprover && item.status === 'pending';
+  // תור הסקירה של המאשר: מיקום העבודה הנוכחית, ומה הבא אחרי החלטה
+  const queue = isApprover ? approverQueue(state, currentUser.id) : [];
+  const queueIdx = queue.findIndex((i) => i.id === item.id);
+  const nextUp = decided ? queue[0] : undefined;
+  const goNext = () => nextUp && navigate(`/item/${nextUp.id}`);
   const lastDecision = [...item.events].reverse().find((e) => e.type === 'decision');
 
   const onAddPin = (pin: Pin, text: string) => {
@@ -110,6 +121,8 @@ function ItemView({ item }: { item: Item }) {
 
   const onDecide = (d: Decision, text: string) => {
     const undo = updateUndoable((s) => decide(s, item.id, d, text));
+    setDecided(d);
+    recordDecision(d);
     const msg = { approved: 'העבודה אושרה ועברה לארכיון', changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: 'העבודה נדחתה' }[d];
     toast(msg, {
       channel: channelOf(designer.id),
@@ -117,6 +130,8 @@ function ItemView({ item }: { item: Item }) {
         label: 'ביטול',
         onClick: () => {
           undo();
+          setDecided(null);
+          recordDecision(d, -1);
           toast('ההחלטה בוטלה. העבודה חזרה להמתין לאישור', { tone: 'info' });
         },
       },
@@ -141,10 +156,24 @@ function ItemView({ item }: { item: Item }) {
     if (id && window.innerWidth < 1024) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // קיצורי מקלדת לסקירה: J/K – הבאה/הקודמת בתור, Enter – לעבודה הבאה אחרי החלטה
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.closest('input, textarea, select, [role=dialog]') || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'j' && queueIdx >= 0 && queue[queueIdx + 1]) navigate(`/item/${queue[queueIdx + 1].id}`);
+      else if (key === 'k' && queueIdx > 0) navigate(`/item/${queue[queueIdx - 1].id}`);
+      else if (e.key === 'Enter' && nextUp && !el.closest('button, a')) navigate(`/item/${nextUp.id}`);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   const toolBtn = 'flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] transition';
 
   return (
-    <div className={`anim-fade lg:flex lg:h-[calc(100vh-53px)] ${canDecide ? 'pb-[88px] lg:pb-0' : ''}`}>
+    <div className={`anim-fade lg:flex lg:h-[calc(100vh-53px)] ${canDecide || nextUp ? 'pb-[88px] lg:pb-0' : ''}`}>
       {/* עמודה ראשית */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-stone-200/80 bg-white px-4 py-4 sm:px-6">
@@ -166,11 +195,12 @@ function ItemView({ item }: { item: Item }) {
                 </span>
               </div>
             </div>
+            <div className="flex flex-wrap items-center gap-3 self-start">
+            {queueIdx >= 0 && <QueueNav index={queueIdx} total={queue.length} prevId={queue[queueIdx - 1]?.id} nextId={queue[queueIdx + 1]?.id} />}
             {sourceVersion && (
               <Button
                 variant="secondary"
                 size="sm"
-                className="self-start"
                 icon={<Download className="h-3.5 w-3.5" />}
                 onClick={() => {
                   void downloadSource(sourceVersion);
@@ -183,6 +213,7 @@ function ItemView({ item }: { item: Item }) {
                 </span>
               </Button>
             )}
+            </div>
           </div>
         </header>
 
@@ -249,6 +280,7 @@ function ItemView({ item }: { item: Item }) {
 
       {/* פאנל צד */}
       <aside className="flex min-h-[480px] flex-col border-stone-200/80 bg-white lg:h-full lg:w-[360px] lg:shrink-0 lg:border-s xl:w-[380px]">
+        {decided && isApprover && <NextUp next={nextUp} remaining={queue.length} tally={reviewTally} onGo={goNext} />}
         {canDecide && <DecisionPanel onDecide={onDecide} openPinCount={openPins} designerName={designer.name} itemTitle={item.title} versionNumber={latest.number} />}
         <StatusNote
           item={item}
