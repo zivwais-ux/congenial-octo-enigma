@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, BellOff, Check, Layers, RotateCcw, Send, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, Bell, BellOff, Check, Layers, MessageSquare, RotateCcw, Send, X, type LucideIcon } from 'lucide-react';
 import type { Notification } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { markAllRead, markRead } from '../../store/actions';
@@ -19,6 +19,7 @@ const KIND: Record<Notification['kind'], string> = {
   approved: 'אישור',
   rejected: 'דחייה',
   overdue: 'תזכורת דדליין',
+  reply: 'תגובה להערה שלך',
 };
 
 const KIND_TONE: Record<Notification['kind'], string> = {
@@ -28,6 +29,7 @@ const KIND_TONE: Record<Notification['kind'], string> = {
   approved: 'text-emerald-700',
   rejected: 'text-red-700',
   overdue: 'text-red-700',
+  reply: 'text-stone-600',
 };
 
 const KIND_ICON: Record<Notification['kind'], { icon: LucideIcon; cls: string }> = {
@@ -37,6 +39,7 @@ const KIND_ICON: Record<Notification['kind'], { icon: LucideIcon; cls: string }>
   approved: { icon: Check, cls: 'bg-emerald-600' },
   rejected: { icon: X, cls: 'bg-red-600' },
   overdue: { icon: AlarmClock, cls: 'bg-red-600' },
+  reply: { icon: MessageSquare, cls: 'bg-stone-500' },
 };
 
 export function NotificationBell() {

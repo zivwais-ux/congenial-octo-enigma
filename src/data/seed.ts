@@ -2,7 +2,7 @@ import type { AppState, Comment, Item, ItemEvent, Notification, Pin, Project, St
 import { placeholderDataUrl, type PlaceholderSpec } from './placeholders';
 import { USER_CHANNEL } from '../lib/status';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** מזהי עבודות הדמה – כל עבודה אחרת נוצרה במהלך ההדגמה */
 export const SEED_ITEM_IDS = new Set(['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12']);
@@ -34,6 +34,8 @@ interface SeedComment {
   resolved?: boolean;
   /** שעות אחרי העלאת הגרסה */
   h: number;
+  /** תגובה להערה אחרת באותה עבודה (מספר ההערה ברשימה, מ-0) */
+  replyTo?: number;
 }
 
 interface SeedItem {
@@ -78,7 +80,7 @@ const seedItems: SeedItem[] = [
     comments: [
       { v: 1, author: 'u1', text: 'הכותרת צריכה להיות גדולה יותר, היא הולכת לאיבוד', pin: { x: 70, y: 44 }, resolved: true, h: 20 },
       { v: 1, author: 'u1', text: 'כפתור כתום על רקע בהיר לא מספיק בולט. לנסות כהה?', pin: { x: 66, y: 72 }, resolved: true, h: 20 },
-      { v: 1, author: 'u3', text: 'מקבלת, מעלה גרסה מתוקנת מחר בבוקר', h: 26 },
+      { v: 1, author: 'u3', text: 'מקבלת, מעלה גרסה מתוקנת מחר בבוקר', h: 26, replyTo: 0 },
     ],
   },
   {
@@ -96,6 +98,8 @@ const seedItems: SeedItem[] = [
     decisionNotes: ['נראה מצוין, רק שני תיקונים קטנים לפני שמעלים.'],
     comments: [
       { v: 1, author: 'u1', text: 'המסגרת דקה מדי, כמעט לא רואים אותה בטלפון', pin: { x: 12, y: 30 }, h: 18 },
+      { v: 1, author: 'u4', text: 'אעבה ל-6 פיקסלים. זה מספיק, או שצריך יותר?', h: 20, replyTo: 0 },
+      { v: 1, author: 'u1', text: '6 זה בדיוק, תודה', h: 21, replyTo: 0 },
       { v: 1, author: 'u1', text: 'להוסיף טיפת דבש שנייה בצד שמאל לאיזון', pin: { x: 28, y: 46 }, h: 18 },
       { v: 1, author: 'u1', text: 'הטקסט התחתון מצוין, לא לגעת', h: 19 },
     ],
@@ -150,7 +154,7 @@ const seedItems: SeedItem[] = [
       { v: 1, author: 'u2', text: 'המק״טים כאן ישנים, לקחת מהקובץ של רונית', pin: { x: 82, y: 55 }, resolved: true, h: 25 },
       { v: 2, author: 'u2', text: 'חסר מחיר מומלץ מתחת לכל מוצר', pin: { x: 71, y: 64 }, h: 20 },
       { v: 2, author: 'u2', text: 'כותרת הכפולה צריכה להיות "סדרת המקצוענים" ולא "מוצרי ניקוי"', pin: { x: 85, y: 12 }, h: 20 },
-      { v: 2, author: 'u6', text: 'מחכה למחירים מהשיווק, אעדכן ברגע שיגיעו', h: 28 },
+      { v: 2, author: 'u6', text: 'מחכה למחירים מהשיווק, אעדכן ברגע שיגיעו', h: 28, replyTo: 1 },
     ],
   },
   {
@@ -338,6 +342,7 @@ export function createSeed(): AppState {
         pin: c.pin,
         createdAt: at,
         resolved: !!c.resolved,
+        parentId: c.replyTo !== undefined ? `${s.id}-c${c.replyTo + 1}` : undefined,
       });
       events.push({ id: `${s.id}-e-${id}`, type: 'comment', authorId: c.author, at, versionNumber: c.v, text: c.text });
     });

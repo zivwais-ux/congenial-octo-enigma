@@ -46,6 +46,8 @@ interface StoreValue {
   state: AppState;
   /** מפעיל פעולה טהורה (state → state) ושומר */
   update: (fn: (s: AppState) => AppState) => void;
+  /** כמו update, ומחזיר פונקציה שמבטלת את הפעולה (חוזרת למצב שלפניה) */
+  updateUndoable: (fn: (s: AppState) => AppState) => () => void;
   resetDemo: () => void;
   currentUser: User;
   /** האם הנתונים השמורים נפסלו בטעינה (כדי להציג הודעה) */
@@ -73,6 +75,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((fn: (s: AppState) => AppState) => setState(fn), []);
 
+  const updateUndoable = useCallback((fn: (s: AppState) => AppState) => {
+    let before: AppState | null = null;
+    setState((s) => {
+      before = s;
+      return fn(s);
+    });
+    // ביטול מחזיר את הנתונים למצב שלפני הפעולה, אבל משאיר את המשתמש שנבחר עכשיו
+    return () => {
+      const snapshot = before;
+      if (snapshot) setState((cur) => ({ ...snapshot, currentUserId: cur.currentUserId }));
+    };
+  }, []);
+
   const resetDemo = useCallback(() => {
     void clearFiles();
     setState((s) => ({ ...createSeed(), currentUserId: s.currentUserId }));
@@ -81,8 +96,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? state.users[0];
 
   const value = useMemo(
-    () => ({ state, update, resetDemo, currentUser, loadOutcome: initial.outcome }),
-    [state, update, resetDemo, currentUser, initial.outcome],
+    () => ({ state, update, updateUndoable, resetDemo, currentUser, loadOutcome: initial.outcome }),
+    [state, update, updateUndoable, resetDemo, currentUser, initial.outcome],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

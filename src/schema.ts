@@ -16,7 +16,7 @@ export const RoleSchema = z.enum(['designer', 'approver']);
 export const StatusSchema = z.enum(['pending', 'changes', 'approved', 'rejected']);
 export const ChannelSchema = z.enum(['מייל', 'Teams', 'וואטסאפ']);
 export const ItemEventTypeSchema = z.enum(['uploaded', 'version', 'comment', 'decision']);
-export const NotificationKindSchema = z.enum(['new', 'version', 'approved', 'changes', 'rejected', 'overdue']);
+export const NotificationKindSchema = z.enum(['new', 'version', 'approved', 'changes', 'rejected', 'overdue', 'reply']);
 
 export const UserSchema = z.object({
   id,
@@ -86,6 +86,8 @@ export const CommentSchema = z.object({
   pin: PinSchema.optional(),
   createdAt: isoDateTime,
   resolved: z.boolean(),
+  /** תגובה להערה אחרת (רמה אחת בלבד) */
+  parentId: id.optional(),
 });
 
 export const NotificationSchema = z.object({
@@ -137,7 +139,15 @@ export const AppStateSchema = z
       });
     });
 
+    const comments = new Map(s.comments.map((c) => [c.id, c]));
     s.comments.forEach((c, i) => {
+      if (c.parentId) {
+        const parent = comments.get(c.parentId);
+        if (!parent) fail(['comments', i, 'parentId'], `ההערה שאליה מגיבים לא קיימת: ${c.parentId}`);
+        else if (parent.parentId) fail(['comments', i, 'parentId'], 'אפשר להגיב רק להערה ראשית');
+        else if (parent.itemId !== c.itemId || parent.versionId !== c.versionId) fail(['comments', i, 'parentId'], 'תגובה חייבת להיות באותה עבודה ובאותה גרסה');
+        if (c.pin) fail(['comments', i, 'pin'], 'לתגובה אין סימון על העבודה');
+      }
       const item = items.get(c.itemId);
       if (!item) fail(['comments', i, 'itemId'], `עבודה לא קיימת: ${c.itemId}`);
       else if (!item.versions.some((v) => v.id === c.versionId)) fail(['comments', i, 'versionId'], `גרסה לא קיימת: ${c.versionId}`);

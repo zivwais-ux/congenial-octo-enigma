@@ -102,7 +102,7 @@ export function decide(s: AppState, itemId: string, status: Exclude<Status, 'pen
   return { ...next, notifications: [n, ...next.notifications] };
 }
 
-export function addComment(s: AppState, itemId: string, versionId: string, text: string, pin?: Pin): AppState {
+export function addComment(s: AppState, itemId: string, versionId: string, text: string, pin?: Pin, parentId?: string): AppState {
   const item = s.items.find((i) => i.id === itemId);
   if (!item) return s;
   const version = item.versions.find((v) => v.id === versionId);
@@ -112,15 +112,24 @@ export function addComment(s: AppState, itemId: string, versionId: string, text:
     versionId,
     authorId: s.currentUserId,
     text,
-    pin,
+    pin: parentId ? undefined : pin,
     createdAt: now(),
     resolved: false,
+    parentId,
   };
   const next = patchItem(s, itemId, (i) => ({
     ...i,
     events: [...i.events, event({ type: 'comment', authorId: s.currentUserId, versionNumber: version?.number, text })],
   }));
-  return { ...next, comments: [...next.comments, comment] };
+  // תגובה מעדכנת את כותב ההערה המקורית (אם זה מישהו אחר)
+  const parent = parentId ? s.comments.find((c) => c.id === parentId) : undefined;
+  const notifications = parent && parent.authorId !== s.currentUserId ? [notify(parent.authorId, itemId, 'reply', s.currentUserId, text), ...next.notifications] : next.notifications;
+  return { ...next, comments: [...next.comments, comment], notifications };
+}
+
+/** מחיקת הערה, יחד עם התגובות אליה */
+export function deleteComment(s: AppState, commentId: string): AppState {
+  return { ...s, comments: s.comments.filter((c) => c.id !== commentId && c.parentId !== commentId) };
 }
 
 export function toggleResolved(s: AppState, commentId: string): AppState {

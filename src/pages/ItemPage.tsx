@@ -6,7 +6,7 @@ import { ProjectChip } from '../components/ui/ProjectChip';
 import type { Tone } from '../lib/status';
 import type { Item, Pin, User } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
-import { addComment, decide, toggleResolved } from '../store/actions';
+import { addComment, decide, deleteComment, toggleResolved } from '../store/actions';
 import { useToast } from '../components/ui/Toast';
 import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
@@ -48,7 +48,7 @@ export function ItemPage() {
 }
 
 function ItemView({ item }: { item: Item }) {
-  const { state, update, currentUser } = useStore();
+  const { state, update, updateUndoable, currentUser } = useStore();
   const { userById, projectById } = useLookups();
   const toast = useToast();
 
@@ -86,10 +86,13 @@ function ItemView({ item }: { item: Item }) {
 
   const itemComments = state.comments.filter((c) => c.itemId === item.id);
   const versionComments = itemComments.filter((c) => c.versionId === version.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const pinned: NumberedPin[] = versionComments.filter((c) => c.pin).map((comment, i) => ({ comment, number: i + 1 }));
-  const general = versionComments.filter((c) => !c.pin);
+  // הערות ראשיות (עם סימון או כלליות); תגובות מוצגות בתוך השרשור של ההערה שאליה הן שייכות
+  const topLevel = versionComments.filter((c) => !c.parentId);
+  const replies = versionComments.filter((c) => c.parentId);
+  const pinned: NumberedPin[] = topLevel.filter((c) => c.pin).map((comment, i) => ({ comment, number: i + 1 }));
+  const general = topLevel.filter((c) => !c.pin);
   const openPins = pinned.filter((p) => !p.comment.resolved).length;
-  const openCount = versionComments.filter((c) => !c.resolved).length;
+  const openCount = topLevel.filter((c) => !c.resolved).length;
   const olderCount = itemComments.filter((c) => c.versionId !== version.id).length;
 
   const isApprover = currentUser.id === item.approverId;
@@ -106,9 +109,30 @@ function ItemView({ item }: { item: Item }) {
   };
 
   const onDecide = (d: Decision, text: string) => {
-    update((s) => decide(s, item.id, d, text));
+    const undo = updateUndoable((s) => decide(s, item.id, d, text));
     const msg = { approved: 'העבודה אושרה ועברה לארכיון', changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: 'העבודה נדחתה' }[d];
-    toast(msg, { channel: channelOf(designer.id) });
+    toast(msg, {
+      channel: channelOf(designer.id),
+      action: {
+        label: 'ביטול',
+        onClick: () => {
+          undo();
+          toast('ההחלטה בוטלה. העבודה חזרה להמתין לאישור', { tone: 'info' });
+        },
+      },
+    });
+  };
+
+  const onToggleResolved = (id: string) => {
+    const wasResolved = state.comments.find((c) => c.id === id)?.resolved;
+    const undo = updateUndoable((s) => toggleResolved(s, id));
+    if (!wasResolved) toast('ההערה סומנה כטופלה', { action: { label: 'ביטול', onClick: undo } });
+  };
+
+  const onDelete = (id: string) => {
+    const undo = updateUndoable((s) => deleteComment(s, id));
+    setActiveId((a) => (a === id ? null : a));
+    toast('ההערה נמחקה', { tone: 'info', action: { label: 'ביטול', onClick: undo } });
   };
 
   const selectFromList = (id: string | null) => {
@@ -258,8 +282,17 @@ function ItemView({ item }: { item: Item }) {
             general={general}
             activeId={activeId}
             onSelect={selectFromList}
-            onToggleResolved={(id) => update((s) => toggleResolved(s, id))}
+            replies={replies}
+            onToggleResolved={onToggleResolved}
+            onDelete={onDelete}
             onAddGeneral={(text) => update((s) => addComment(s, item.id, version.id, text))}
+            onReply={(parentId, text, resolve) => {
+              update((s) => {
+                const next = addComment(s, item.id, version.id, text, undefined, parentId);
+                return resolve ? toggleResolved(next, parentId) : next;
+              });
+              if (resolve) toast('התגובה נשלחה וההערה סומנה כטופלה');
+            }}
             showResolved={showResolved}
             onShowResolved={setShowResolved}
             olderCount={olderCount}
