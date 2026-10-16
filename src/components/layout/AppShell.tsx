@@ -6,6 +6,7 @@ import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
 import { DemoGuide } from './DemoGuide';
 import { DeliveryPreview } from './DeliveryPreview';
+import { Welcome } from './Welcome';
 import { useUI } from './UIContext';
 import { useStore } from '../../store/StoreProvider';
 import { useToast } from '../ui/Toast';
@@ -19,7 +20,7 @@ export function AppShell() {
   useEffect(() => window.scrollTo(0, 0), [pathname]);
 
   // אם הנתונים השמורים נפסלו בבדיקת הסכמה – מודיעים פעם אחת, במקום מסך שבור
-  const { loadOutcome } = useStore();
+  const { loadOutcome, state } = useStore();
   const toast = useToast();
   const warned = useRef(false);
   useEffect(() => {
@@ -56,6 +57,8 @@ export function AppShell() {
       <CommandPalette />
       <DemoGuide />
       <DeliveryPreview />
+      {/* מסך הפתיחה רק בדף הראשי, כדי שקישור ישיר לעבודה ייפתח כרגיל */}
+      {!state.tour.welcomed && pathname === '/' && <Welcome />}
     </div>
   );
 }
