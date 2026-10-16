@@ -12,7 +12,7 @@ export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
-        <HashRouter>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <UIProvider>
             <Routes>
               <Route element={<AppShell />}>

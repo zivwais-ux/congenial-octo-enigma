@@ -1,110 +1,36 @@
-export type Role = 'designer' | 'approver';
+// הטיפוסים נגזרים אוטומטית מהסכמה ב-schema.ts, כך שההגדרה והבדיקה בזמן ריצה
+// תמיד זהות. כדי לשנות מבנה נתונים – משנים את הסכמה, לא את הקובץ הזה.
+import type { z } from 'zod';
+import type {
+  AppStateSchema,
+  ChannelSchema,
+  CommentSchema,
+  ItemEventSchema,
+  ItemEventTypeSchema,
+  ItemSchema,
+  NotificationKindSchema,
+  NotificationSchema,
+  PinSchema,
+  ProjectSchema,
+  RoleSchema,
+  StatusSchema,
+  TourStateSchema,
+  UserSchema,
+  VersionSchema,
+} from './schema';
 
-export type Status = 'pending' | 'changes' | 'approved' | 'rejected';
-
-export type Channel = 'מייל' | 'Teams' | 'וואטסאפ';
-
-export interface User {
-  id: string;
-  name: string;
-  role: Role;
-  /** ראשי תיבות לאווטאר */
-  avatar: string;
-  /** תפקיד לתצוגה, למשל "מנהלת מחלקת עיצוב" */
-  title: string;
-  color: string;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface Version {
-  id: string;
-  number: number;
-  /** data: URL (נתוני דמה) או idb://<id> (קובץ שהועלה ונשמר ב-IndexedDB) */
-  previewFileUrl: string;
-  previewFileName: string;
-  previewMime: string;
-  sourceFileName?: string;
-  /** idb://<id> כשהמעצב העלה קובץ מקור אמיתי */
-  sourceFileUrl?: string;
-  note: string;
-  uploadedAt: string;
-}
-
-export type ItemEventType = 'uploaded' | 'version' | 'comment' | 'decision';
-
-export interface ItemEvent {
-  id: string;
-  type: ItemEventType;
-  authorId: string;
-  at: string;
-  versionNumber?: number;
-  status?: Status;
-  text?: string;
-}
-
-export interface Item {
-  id: string;
-  title: string;
-  projectId: string;
-  designerId: string;
-  approverId: string;
-  dueDate: string;
-  status: Status;
-  versions: Version[];
-  createdAt: string;
-  events: ItemEvent[];
-}
-
-export interface Pin {
-  /** אחוזים מרוחב/גובה התמונה */
-  x: number;
-  y: number;
-}
-
-export interface Comment {
-  id: string;
-  itemId: string;
-  versionId: string;
-  authorId: string;
-  text: string;
-  pin?: Pin;
-  createdAt: string;
-  resolved: boolean;
-}
-
-export type NotificationKind = 'new' | 'version' | 'approved' | 'changes' | 'rejected' | 'overdue';
-
-export interface Notification {
-  id: string;
-  userId: string;
-  kind: NotificationKind;
-  /** מי ביצע את הפעולה (אין במקרה של תזכורת מערכת) */
-  actorId?: string;
-  /** פירוט קצר (לא חובה); הכותרת נגזרת מסוג ההתראה ומשם העבודה */
-  text: string;
-  itemId: string;
-  read: boolean;
-  channel: Channel;
-  createdAt: string;
-}
-
-export interface TourState {
-  /** האם הארכיון נפתח אחרי שעבודת ההדגמה אושרה */
-  archiveSeen: boolean;
-}
-
-export interface AppState {
-  schema: number;
-  tour: TourState;
-  currentUserId: string;
-  users: User[];
-  projects: Project[];
-  items: Item[];
-  comments: Comment[];
-  notifications: Notification[];
-}
+export type Role = z.infer<typeof RoleSchema>;
+export type Status = z.infer<typeof StatusSchema>;
+export type Channel = z.infer<typeof ChannelSchema>;
+export type User = z.infer<typeof UserSchema>;
+export type Project = z.infer<typeof ProjectSchema>;
+export type Version = z.infer<typeof VersionSchema>;
+export type ItemEventType = z.infer<typeof ItemEventTypeSchema>;
+export type ItemEvent = z.infer<typeof ItemEventSchema>;
+export type Item = z.infer<typeof ItemSchema>;
+export type Pin = z.infer<typeof PinSchema>;
+export type Comment = z.infer<typeof CommentSchema>;
+export type NotificationKind = z.infer<typeof NotificationKindSchema>;
+export type Notification = z.infer<typeof NotificationSchema>;
+export type TourState = z.infer<typeof TourStateSchema>;
+export type AppState = z.infer<typeof AppStateSchema>;

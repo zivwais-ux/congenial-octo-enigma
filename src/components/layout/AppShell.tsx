@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -6,6 +6,8 @@ import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
 import { DemoGuide } from './DemoGuide';
 import { useUI } from './UIContext';
+import { useStore } from '../../store/StoreProvider';
+import { useToast } from '../ui/Toast';
 
 export function AppShell() {
   const { pathname } = useLocation();
@@ -14,6 +16,16 @@ export function AppShell() {
   const onItem = pathname.startsWith('/item/');
 
   useEffect(() => window.scrollTo(0, 0), [pathname]);
+
+  // אם הנתונים השמורים נפסלו בבדיקת הסכמה – מודיעים פעם אחת, במקום מסך שבור
+  const { loadOutcome } = useStore();
+  const toast = useToast();
+  const warned = useRef(false);
+  useEffect(() => {
+    if (loadOutcome !== 'invalid' || warned.current) return;
+    warned.current = true;
+    toast('הנתונים השמורים בדפדפן לא היו תקינים, ולכן ההדגמה התחילה מחדש', { tone: 'info' });
+  }, [loadOutcome, toast]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
