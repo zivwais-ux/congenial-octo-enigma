@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Activity, Check, Clock3, Columns2, Download, Eye, EyeOff, MessageSquare, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
+import { Activity, Check, ChevronDown, Clock3, Columns2, Download, Eye, EyeOff, Maximize2, MessageSquare, Minimize2, Minus, Plus, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
+import { MAX_ZOOM, MIN_ZOOM } from '../components/viewer/PreviewPane';
+import { isPdf } from '../components/ui/FileThumb';
 import { IconTile } from '../components/ui/IconTile';
 import { ProjectChip } from '../components/ui/ProjectChip';
 import type { Tone } from '../lib/status';
@@ -65,6 +67,10 @@ function ItemView({ item }: { item: Item }) {
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const [decided, setDecided] = useState<Decision | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [actualZoom, setActualZoom] = useState(1);
+  const [fullscreen, setFullscreen] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
   const { reviewTally, recordDecision } = useUI();
   const navigate = useNavigate();
 
@@ -85,6 +91,21 @@ function ItemView({ item }: { item: Item }) {
 
   const version = item.versions.find((v) => v.id === viewId) ?? latest;
   const isLatest = version.id === latest.id;
+  const versionIdx = item.versions.findIndex((v) => v.id === version.id);
+  const canZoom = !isPdf(version);
+  useEffect(() => setZoom(1), [version.id]);
+
+  // מסך מלא על הבמה בלבד
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === stageRef.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void stageRef.current?.requestFullscreen?.();
+  };
+  const stepZoom = (dir: 1 | -1) => setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((dir > 0 ? z * 1.5 : z / 1.5) * 100) / 100)));
   // קובץ המקור של הגרסה הנצפית, ואם אין לה – האחרון שהועלה
   const sourceVersion = version.sourceFileName ? version : [...item.versions].reverse().find((v) => v.sourceFileName);
   const designer = userById.get(item.designerId)!;
@@ -165,6 +186,12 @@ function ItemView({ item }: { item: Item }) {
       if (key === 'j' && queueIdx >= 0 && queue[queueIdx + 1]) navigate(`/item/${queue[queueIdx + 1].id}`);
       else if (key === 'k' && queueIdx > 0) navigate(`/item/${queue[queueIdx - 1].id}`);
       else if (e.key === 'Enter' && nextUp && !el.closest('button, a')) navigate(`/item/${nextUp.id}`);
+      // ← / → בין גרסאות (כמו סדר הלשוניות: שמאלה = ישנה יותר), +/-/0 לזום
+      else if (e.key === 'ArrowLeft' && versionIdx > 0 && !compare) setViewId(item.versions[versionIdx - 1].id);
+      else if (e.key === 'ArrowRight' && versionIdx < item.versions.length - 1 && !compare) setViewId(item.versions[versionIdx + 1].id);
+      else if ((e.key === '+' || e.key === '=') && canZoom) stepZoom(1);
+      else if (e.key === '-' && canZoom) stepZoom(-1);
+      else if (e.key === '0' && canZoom) setZoom(1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -244,6 +271,24 @@ function ItemView({ item }: { item: Item }) {
                 />
                 {!isLatest && <span className="hidden text-[12px] text-amber-300/90 sm:inline">גרסה קודמת, לצפייה בלבד</span>}
                 <div className="ms-auto flex items-center gap-0.5">
+                  {canZoom && (
+                    <div className="me-1 flex items-center rounded-md bg-white/[0.06]" data-testid="zoom-controls">
+                      <button onClick={() => stepZoom(-1)} disabled={zoom <= MIN_ZOOM} className="flex h-7 w-7 items-center justify-center rounded-md text-stone-400 transition hover:text-white disabled:opacity-30" aria-label="הקטנה" title="הקטנה (-)">
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setZoom((z) => (z > 1.001 ? 1 : Math.min(MAX_ZOOM, actualZoom)))}
+                        className="num h-7 min-w-[3.25rem] px-1 text-[12px] text-stone-300 transition hover:text-white"
+                        title={zoom > 1.001 ? 'חזרה להתאמה למסך (0)' : 'גודל אמיתי (100%)'}
+                        data-testid="zoom-label"
+                      >
+                        {zoom > 1.001 ? `${Math.round((zoom / actualZoom) * 100)}%` : 'התאמה'}
+                      </button>
+                      <button onClick={() => stepZoom(1)} disabled={zoom >= MAX_ZOOM} className="flex h-7 w-7 items-center justify-center rounded-md text-stone-400 transition hover:text-white disabled:opacity-30" aria-label="הגדלה" title="הגדלה (+)" data-testid="zoom-in">
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {pinned.length > 0 && (
                     <button
                       onClick={() => setShowPins((v) => !v)}
@@ -257,21 +302,42 @@ function ItemView({ item }: { item: Item }) {
                   {item.versions.length > 1 && (
                     <button onClick={() => setCompare(true)} className={`${toolBtn} text-stone-400 hover:bg-white/[0.06] hover:text-white`} data-testid="compare-toggle">
                       <Columns2 className="h-3.5 w-3.5" />
-                      השוואה
+                      <span className="hidden sm:inline">השוואה</span>
+                    </button>
+                  )}
+                  {typeof document !== 'undefined' && document.fullscreenEnabled && (
+                    <button onClick={toggleFullscreen} className={`${toolBtn} text-stone-400 hover:bg-white/[0.06] hover:text-white`} title={fullscreen ? 'יציאה ממסך מלא' : 'מסך מלא'} aria-label={fullscreen ? 'יציאה ממסך מלא' : 'מסך מלא'} data-testid="fullscreen">
+                      {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                     </button>
                   )}
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-auto">
-                <PreviewPane
-                  version={version}
-                  pins={showPins ? pinned : []}
-                  activeId={activeId}
-                  onSelect={setActiveId}
-                  onAddPin={canPin ? onAddPin : undefined}
-                  showResolved={showResolved}
-                  className="min-h-full"
-                />
+              <div className="relative min-h-0 flex-1">
+                <div className="h-full overflow-auto max-lg:max-h-[75vh]" data-stage-scroll>
+                  <PreviewPane
+                    version={version}
+                    pins={showPins ? pinned : []}
+                    activeId={activeId}
+                    onSelect={setActiveId}
+                    onAddPin={canPin ? onAddPin : undefined}
+                    showResolved={showResolved}
+                    className="min-h-full max-lg:pb-16"
+                    zoom={zoom}
+                    onZoom={setZoom}
+                    onActualSize={setActualZoom}
+                    maxH={fullscreen ? 'max-h-[calc(100vh-7rem)]' : undefined}
+                  />
+                </div>
+                {/* מובייל: קיצור דרך מהעבודה אל ההערות */}
+                <button
+                  onClick={() => asideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="absolute bottom-3 left-1/2 flex h-8 -translate-x-1/2 items-center gap-1.5 rounded-full bg-white/95 px-3 text-sm font-medium text-ink shadow-pop lg:hidden"
+                  data-testid="jump-to-comments"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {openCount > 0 ? `${openCount} הערות` : 'הערות'}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
               </div>
             </>
           )}
@@ -279,7 +345,7 @@ function ItemView({ item }: { item: Item }) {
       </div>
 
       {/* פאנל צד */}
-      <aside className="flex min-h-[480px] flex-col border-stone-200/80 bg-white lg:h-full lg:w-[360px] lg:shrink-0 lg:border-s xl:w-[380px]">
+      <aside ref={asideRef} className="flex min-h-[480px] scroll-mt-14 flex-col border-stone-200/80 bg-white lg:h-full lg:w-[360px] lg:shrink-0 lg:border-s xl:w-[380px]">
         {decided && isApprover && <NextUp next={nextUp} remaining={queue.length} tally={reviewTally} onGo={goNext} />}
         {canDecide && <DecisionPanel onDecide={onDecide} openPinCount={openPins} designerName={designer.name} itemTitle={item.title} versionNumber={latest.number} />}
         <StatusNote

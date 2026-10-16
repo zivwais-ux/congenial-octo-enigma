@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { FileText, ImageOff } from 'lucide-react';
 import type { Comment, Pin, Version } from '../../types';
 import { useFileUrl } from '../../hooks/useFileUrl';
@@ -9,6 +9,10 @@ export interface NumberedPin {
   number: number;
 }
 
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 4;
+const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100));
+
 interface Props {
   version: Version;
   pins: NumberedPin[];
@@ -17,18 +21,100 @@ interface Props {
   /** אם מוגדר – קליק על העבודה פותח הערה חדשה במיקום */
   onAddPin?: (pin: Pin, text: string) => void;
   showResolved: boolean;
-  /** גובה מקסימלי לתמונה */
+  /** גובה מקסימלי לתמונה (במצב "התאמה למסך") */
   maxH?: string;
   className?: string;
+  /** זום ביחס להתאמה למסך: 1 = התאמה, 2 = פי 2 וכו׳ */
+  zoom?: number;
+  onZoom?: (z: number) => void;
+  /** מדווח כמה זום שווה ל-100% (גודל הקובץ האמיתי) */
+  onActualSize?: (z: number) => void;
 }
 
-/** במת התצוגה: רקע כהה וניטרלי, כדי שהעבודה תהיה במרכז */
-export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showResolved, maxH, className = '' }: Props) {
+/** במת התצוגה: רקע כהה וניטרלי, כדי שהעבודה תהיה במרכז. תומכת בזום, גרירה וצביטה */
+export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showResolved, maxH, className = '', zoom = 1, onZoom, onActualSize }: Props) {
   const { url, missing } = useFileUrl(version.previewFileUrl);
   const pdf = isPdf(version);
   const [draft, setDraft] = useState<Pin | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const baseWidth = useRef(0);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const zoomed = zoom > 1.001 && baseWidth.current > 0;
 
   useEffect(() => setDraft(null), [version.id]);
+
+  // מודדים את רוחב התמונה ב"התאמה למסך" – הבסיס לחישוב הזום
+  const measure = () => {
+    const img = imgRef.current;
+    if (!img || zoomRef.current > 1.001) return;
+    const w = img.getBoundingClientRect().width;
+    if (!w) return;
+    baseWidth.current = w;
+    if (img.naturalWidth) onActualSize?.(Math.max(1, img.naturalWidth / w));
+  };
+  useLayoutEffect(measure);
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  });
+
+  // Ctrl/⌘ + גלגלת = זום (מאזין לא-פסיבי כדי לבטל את הזום של הדפדפן)
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || !onZoom) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      onZoom(clampZoom(zoomRef.current * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [onZoom, url]);
+
+  // גרירה (כשמוגדל) וצביטה (שתי אצבעות). תזוזה קטנה נחשבת קליק
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const drag = useRef({ moved: false, startDist: 0, startZoom: 1 });
+  const scroller = () => canvasRef.current?.closest('[data-stage-scroll]') as HTMLElement | null;
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    drag.current.moved = false;
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      drag.current.startDist = Math.hypot(a.x - b.x, a.y - b.y);
+      drag.current.startZoom = zoomRef.current;
+    }
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const prev = pointers.current.get(e.pointerId);
+    if (!prev) return;
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2 && onZoom && drag.current.startDist) {
+      const [a, b] = [...pointers.current.values()];
+      drag.current.moved = true;
+      onZoom(clampZoom((drag.current.startZoom * Math.hypot(a.x - b.x, a.y - b.y)) / drag.current.startDist));
+      return;
+    }
+    if (zoomRef.current > 1.001 && e.buttons) {
+      if (Math.abs(dx) + Math.abs(dy) > 0) {
+        const s = scroller();
+        if (s) {
+          s.scrollLeft -= dx;
+          s.scrollTop -= dy;
+        }
+      }
+    }
+  };
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) drag.current.startDist = 0;
+  };
+  // סך התזוזה מאז הלחיצה קובע אם זו גרירה או קליק
+  const downAt = useRef<{ x: number; y: number } | null>(null);
 
   const h = maxH ?? 'max-h-[52vh] lg:max-h-[calc(100vh-17.5rem)]';
 
@@ -53,6 +139,9 @@ export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showR
   }
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    const start = downAt.current;
+    downAt.current = null;
+    if (drag.current.moved || (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4)) return;
     if (!onAddPin) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setDraft({ x: round(((e.clientX - rect.left) / rect.width) * 100), y: round(((e.clientY - rect.top) / rect.height) * 100) });
@@ -60,11 +149,35 @@ export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showR
   };
 
   const visible = pins.filter((p) => showResolved || !p.comment.resolved || p.comment.id === activeId);
+  const cursor = zoomed ? 'cursor-grab active:cursor-grabbing' : onAddPin ? 'cursor-crosshair' : '';
 
   return (
     <Stage className={className}>
-      <div className={`relative inline-block select-none ${onAddPin ? 'cursor-crosshair' : ''}`} onClick={handleClick} data-testid="preview-canvas">
-        {url && <img src={url} alt={version.previewFileName} className={`block h-auto w-auto max-w-full ${h} shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]`} draggable={false} />}
+      <div
+        ref={canvasRef}
+        className={`relative inline-block shrink-0 select-none ${cursor}`}
+        style={{ touchAction: zoomed ? 'none' : 'pan-x pan-y' }}
+        onClick={handleClick}
+        onPointerDown={(e) => {
+          downAt.current = { x: e.clientX, y: e.clientY };
+          onPointerDown(e);
+        }}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        data-testid="preview-canvas"
+      >
+        {url && (
+          <img
+            ref={imgRef}
+            src={url}
+            alt={version.previewFileName}
+            onLoad={measure}
+            className={`block h-auto ${zoomed ? '' : `w-auto max-w-full ${h}`} shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]`}
+            style={zoomed ? { width: baseWidth.current * zoom, maxWidth: 'none', maxHeight: 'none' } : undefined}
+            draggable={false}
+          />
+        )}
         {visible.map(({ comment, number }) => {
           const active = comment.id === activeId;
           return (
@@ -100,7 +213,8 @@ export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showR
           />
         )}
       </div>
-      {onAddPin && !draft && <p className="mt-5 text-xs text-stone-500">לחיצה על נקודה בעבודה משאירה הערה בדיוק שם</p>}
+      {onAddPin && !draft && !zoomed && <p className="mt-5 text-center text-xs text-stone-500">לחיצה על נקודה בעבודה משאירה הערה בדיוק שם</p>}
+      {zoomed && <p className="mt-4 text-center text-xs text-stone-500">גוררים כדי לזוז בעבודה · קליק בלי גרירה משאיר הערה</p>}
     </Stage>
   );
 }
@@ -110,7 +224,12 @@ function round(n: number) {
 }
 
 export function Stage({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`stage-bg flex min-h-[300px] flex-col items-center justify-center p-5 sm:p-8 ${className}`}>{children}</div>;
+  // m-auto במקום מרכוז ב-flex: כשהתמונה מוגדלת אפשר לגלול לכל הקצוות שלה
+  return (
+    <div className={`stage-bg flex min-h-[300px] p-5 sm:p-8 ${className}`}>
+      <div className="m-auto flex flex-col items-center">{children}</div>
+    </div>
+  );
 }
 
 function DraftPin({ pin, number, onSave, onCancel }: { pin: Pin; number: number; onSave: (text: string) => void; onCancel: () => void }) {
