@@ -1,6 +1,6 @@
 // פעולות טהורות על ה-state. כאן "מדמים" את מה שבמערכת אמיתית היה קורה בשרת:
 // יצירת פריט, החלטה, גרסה חדשה – וכל אחת מייצרת התראה לצד השני.
-import type { AppState, Comment, Item, ItemEvent, Notification, Pin, Status, Version } from '../types';
+import type { AppState, BrandCheck, Comment, Item, ItemEvent, Notification, Pin, Status, Version } from '../types';
 import { uid } from '../lib/id';
 import { USER_CHANNEL } from '../lib/status';
 
@@ -63,11 +63,12 @@ export function createItem(s: AppState, input: NewItemInput): { state: AppState;
 export function addVersion(
   s: AppState,
   itemId: string,
-  input: { note: string; preview: { url: string; name: string; mime: string }; source?: { url: string; name: string } },
+  input: { note: string; preview: { url: string; name: string; mime: string }; source?: { url: string; name: string }; fixes?: string[] },
 ): AppState {
   const item = s.items.find((i) => i.id === itemId);
   if (!item) return s;
   const number = item.versions.length + 1;
+  const fixes = new Set(input.fixes ?? []);
   const version: Version = {
     id: uid('v'),
     number,
@@ -78,6 +79,7 @@ export function addVersion(
     sourceFileUrl: input.source?.url,
     note: input.note,
     uploadedAt: now(),
+    fixes: fixes.size ? [...fixes] : undefined,
   };
   const next = patchItem(s, itemId, (i) => ({
     ...i,
@@ -86,17 +88,19 @@ export function addVersion(
     events: [...i.events, event({ type: 'version', authorId: s.currentUserId, versionNumber: number, text: input.note || undefined })],
   }));
   const n = notify(item.approverId, itemId, 'version', s.currentUserId, input.note);
-  return { ...next, notifications: [n, ...next.notifications] };
+  // הערות שסומנו "תוקן בגרסה הזו" נסגרות כטופלו
+  const comments = fixes.size ? next.comments.map((c) => (fixes.has(c.id) && !c.resolved ? { ...c, resolved: true } : c)) : next.comments;
+  return { ...next, comments, notifications: [n, ...next.notifications] };
 }
 
-export function decide(s: AppState, itemId: string, status: Exclude<Status, 'pending'>, text: string): AppState {
+export function decide(s: AppState, itemId: string, status: Exclude<Status, 'pending'>, text: string, checks?: BrandCheck[]): AppState {
   const item = s.items.find((i) => i.id === itemId);
   if (!item) return s;
   const versionNumber = item.versions.length;
   const next = patchItem(s, itemId, (i) => ({
     ...i,
     status,
-    events: [...i.events, event({ type: 'decision', authorId: s.currentUserId, versionNumber, status, text: text || undefined })],
+    events: [...i.events, event({ type: 'decision', authorId: s.currentUserId, versionNumber, status, text: text || undefined, checks: status === 'approved' && checks?.length ? checks : undefined })],
   }));
   const n = notify(item.designerId, itemId, status, s.currentUserId, text);
   return { ...next, notifications: [n, ...next.notifications] };

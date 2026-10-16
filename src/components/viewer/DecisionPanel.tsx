@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import type { Status } from '../../types';
+import type { BrandCheck, Status } from '../../types';
+import { BRAND_CHECKS } from '../../lib/checks';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { comments, firstName } from '../../lib/copy';
@@ -8,7 +9,7 @@ import { comments, firstName } from '../../lib/copy';
 export type Decision = Exclude<Status, 'pending'>;
 
 interface Props {
-  onDecide: (d: Decision, text: string) => void;
+  onDecide: (d: Decision, text: string, checks?: BrandCheck[]) => void;
   openPinCount: number;
   designerName: string;
   itemTitle: string;
@@ -60,8 +61,10 @@ export function DecisionPanel(p: Props) {
 
 function DecisionModal({ decision, onClose, onDecide, openPinCount, designerName, itemTitle }: Props & { decision: Decision | null; onClose: () => void }) {
   const [text, setText] = useState('');
+  const [checks, setChecks] = useState<BrandCheck[]>([]);
   const close = () => {
     setText('');
+    setChecks([]);
     onClose();
   };
   if (!decision) return null;
@@ -97,7 +100,7 @@ function DecisionModal({ decision, onClose, onDecide, openPinCount, designerName
   const valid = !cfg.required || text.trim().length > 0;
   const submit = () => {
     if (!valid) return;
-    onDecide(decision, text.trim());
+    onDecide(decision, text.trim(), decision === 'approved' ? BRAND_CHECKS.filter((c) => checks.includes(c.id)).map((c) => c.id) : undefined);
     close();
   };
 
@@ -109,18 +112,44 @@ function DecisionModal({ decision, onClose, onDecide, openPinCount, designerName
           submit();
         }}
       >
+        {decision === 'approved' && (
+          <fieldset className="mb-4 rounded-lg border border-stone-200" data-testid="brand-checklist">
+            <legend className="sr-only">צ'קליסט מותג</legend>
+            <div className="flex items-baseline justify-between border-b border-stone-100 px-3 py-2">
+              <span className="text-sm font-medium text-ink">לפני שמאשרים</span>
+              <span className={`num text-xs ${checks.length === BRAND_CHECKS.length ? 'text-emerald-700' : 'text-stone-500'}`}>
+                {checks.length} מתוך {BRAND_CHECKS.length} נבדקו
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              {BRAND_CHECKS.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-ink transition hover:bg-stone-50">
+                  <input
+                    type="checkbox"
+                    checked={checks.includes(c.id)}
+                    onChange={() => setChecks((cur) => (cur.includes(c.id) ? cur.filter((x) => x !== c.id) : [...cur, c.id]))}
+                    className="h-4 w-4 shrink-0 accent-[#047857]"
+                    data-testid="brand-check"
+                  />
+                  {c.label}
+                </label>
+              ))}
+            </div>
+            {checks.length < BRAND_CHECKS.length && <p className="border-t border-stone-100 px-3 py-1.5 text-xs text-stone-500">לא חובה. מה שיסומן יתועד בציר הפעילות ובארכיון.</p>}
+          </fieldset>
+        )}
         <label className="mb-1.5 block text-sm font-medium text-ink">
           {cfg.required ? 'הסבר' : 'הערה'}
           {!cfg.required && <span className="ms-1.5 font-normal text-stone-400">לא חובה</span>}
         </label>
         <textarea
-          autoFocus
+          autoFocus={decision !== 'approved'}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit();
           }}
-          rows={4}
+          rows={decision === 'approved' ? 2 : 4}
           placeholder={cfg.placeholder}
           className="input resize-none"
           data-testid="decision-text"

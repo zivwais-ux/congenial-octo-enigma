@@ -16,6 +16,8 @@ export const RoleSchema = z.enum(['designer', 'approver']);
 export const StatusSchema = z.enum(['pending', 'changes', 'approved', 'rejected']);
 export const ChannelSchema = z.enum(['מייל', 'Teams', 'וואטסאפ']);
 export const ItemEventTypeSchema = z.enum(['uploaded', 'version', 'comment', 'decision']);
+/** מה המאשר בדק לפני אישור (צ'קליסט מותג) */
+export const BrandCheckSchema = z.enum(['logo', 'colors', 'proofing', 'size']);
 export const NotificationKindSchema = z.enum(['new', 'version', 'approved', 'changes', 'rejected', 'overdue', 'reply']);
 
 export const UserSchema = z.object({
@@ -46,6 +48,8 @@ export const VersionSchema = z.object({
   sourceFileUrl: fileRef.optional(),
   note: z.string(),
   uploadedAt: isoDateTime,
+  /** הערות מהגרסה הקודמת שהמעצב סימן כ"תוקן בגרסה הזו" */
+  fixes: z.array(id).optional(),
 });
 
 export const ItemEventSchema = z.object({
@@ -56,6 +60,8 @@ export const ItemEventSchema = z.object({
   versionNumber: z.number().int().positive().optional(),
   status: StatusSchema.optional(),
   text: z.string().optional(),
+  /** בהחלטת אישור: מה נבדק בצ'קליסט המותג */
+  checks: z.array(BrandCheckSchema).optional(),
 });
 
 export const ItemSchema = z.object({
@@ -107,6 +113,8 @@ export const NotificationSchema = z.object({
 export const TourStateSchema = z.object({
   /** האם הארכיון נפתח אחרי שעבודת ההדגמה אושרה */
   archiveSeen: z.boolean(),
+  /** האם מסך הפתיחה כבר הוצג */
+  welcomed: z.boolean(),
 });
 
 export const AppStateSchema = z
@@ -153,6 +161,15 @@ export const AppStateSchema = z
       else if (!item.versions.some((v) => v.id === c.versionId)) fail(['comments', i, 'versionId'], `גרסה לא קיימת: ${c.versionId}`);
       if (!users.has(c.authorId)) fail(['comments', i, 'authorId'], `כותב לא קיים: ${c.authorId}`);
     });
+
+    s.items.forEach((item, i) =>
+      item.versions.forEach((v, vi) =>
+        v.fixes?.forEach((cid, fi) => {
+          const c = comments.get(cid);
+          if (!c || c.itemId !== item.id) fail(['items', i, 'versions', vi, 'fixes', fi], `הערה שתוקנה לא קיימת: ${cid}`);
+        }),
+      ),
+    );
 
     s.notifications.forEach((n, i) => {
       if (!users.has(n.userId)) fail(['notifications', i, 'userId'], `נמען לא קיים: ${n.userId}`);

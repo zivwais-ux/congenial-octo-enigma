@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, CornerDownLeft, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, CornerDownLeft, History, MoreHorizontal, Trash2 } from 'lucide-react';
 import type { Comment, User, Version } from '../../types';
 import { useLookups, useStore } from '../../store/StoreProvider';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -24,6 +24,8 @@ interface Props {
   onShowResolved: (v: boolean) => void;
   olderCount: number;
   canPin: boolean;
+  /** הערות הגרסה הקודמת, לבדיקה שהתיקונים בוצעו */
+  previous?: { versionNumber: number; comments: { comment: Comment; number?: number }[] };
 }
 
 /** שרשור ההערות של הגרסה: הערת המעצב, הערות על העבודה עם תגובות, הערות כלליות, ותיבת כתיבה */
@@ -85,6 +87,8 @@ export function CommentPanel(p: Props) {
           </div>
         )}
 
+        {p.previous && p.previous.comments.length > 0 && <PreviousVersion {...p.previous} activeId={p.activeId} onSelect={p.onSelect} />}
+
         {empty ? (
           <div className="px-6 py-10 text-center">
             <div className="text-base font-medium text-ink">{resolvedCount ? 'כל ההערות טופלו' : 'אין עדיין הערות'}</div>
@@ -105,7 +109,7 @@ export function CommentPanel(p: Props) {
               {p.showResolved ? 'הסתרת הערות שטופלו' : `הצגת ${resolvedCount === 1 ? 'הערה אחת שטופלה' : `${resolvedCount} הערות שטופלו`}`}
             </button>
           )}
-          {p.olderCount > 0 && <span>{p.olderCount === 1 ? 'עוד הערה אחת' : `עוד ${p.olderCount} הערות`} בגרסאות קודמות</span>}
+          {p.olderCount > 0 && !p.previous && <span>{p.olderCount === 1 ? 'עוד הערה אחת' : `עוד ${p.olderCount} הערות`} בגרסאות קודמות</span>}
         </div>
       </div>
 
@@ -117,6 +121,77 @@ export function CommentPanel(p: Props) {
           <Composer value={text} onChange={setText} onSubmit={submit} placeholder="כתיבת הערה…" testId="general-comment-input" />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** "מגרסה 1 · 2 טופלו, 1 פתוחה": מה קרה להערות של הסבב הקודם */
+function PreviousVersion({
+  versionNumber,
+  comments,
+  activeId,
+  onSelect,
+}: {
+  versionNumber: number;
+  comments: { comment: Comment; number?: number }[];
+  activeId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const { userById } = useLookups();
+  const fixed = comments.filter((c) => c.comment.resolved).length;
+  const openN = comments.length - fixed;
+  const [expanded, setExpanded] = useState(openN > 0);
+  return (
+    <div className="border-b border-stone-100" data-testid="previous-version">
+      <button onClick={() => setExpanded((v) => !v)} className="flex w-full items-center gap-2 px-4 py-2.5 text-start text-sm transition hover:bg-stone-50" aria-expanded={expanded}>
+        <History className="h-3.5 w-3.5 text-stone-400" />
+        <span className="font-medium text-ink">מגרסה {versionNumber}</span>
+        <span className="num text-xs text-stone-500">
+          {fixed > 0 && <span className="text-emerald-700">{fixed === 1 ? 'אחת טופלה' : `${fixed} טופלו`}</span>}
+          {fixed > 0 && openN > 0 && ' · '}
+          {openN > 0 && <span className="text-signal-700">{openN === 1 ? 'אחת פתוחה' : `${openN} פתוחות`}</span>}
+        </span>
+        <ChevronDown className={`ms-auto h-4 w-4 text-stone-400 transition ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      {expanded && (
+        <ul className="space-y-1 px-3 pb-3">
+          {comments.map(({ comment, number }) => {
+            const author = userById.get(comment.authorId);
+            const active = comment.id === activeId;
+            const body = (
+              <>
+                <span
+                  className={`num mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed text-2xs font-semibold ${
+                    comment.resolved ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-signal-400 bg-signal-50 text-signal-700'
+                  }`}
+                >
+                  {comment.resolved ? <Check className="h-3 w-3" strokeWidth={3} /> : (number ?? '·')}
+                </span>
+                <span className="min-w-0 flex-1 leading-snug">
+                  <span className={`block text-sm ${comment.resolved ? 'text-stone-500' : 'text-ink'}`}>{comment.text}</span>
+                  <span className="block text-xs text-stone-400">
+                    {author?.name} · {comment.resolved ? 'טופל' : 'עדיין פתוח'}
+                  </span>
+                </span>
+              </>
+            );
+            return (
+              <li key={comment.id} data-comment={comment.id}>
+                {number !== undefined ? (
+                  <button
+                    onClick={() => onSelect(active ? null : comment.id)}
+                    className={`flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-start transition ${active ? 'bg-stone-100' : 'hover:bg-stone-50'}`}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div className="flex items-start gap-2.5 px-2 py-1.5">{body}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

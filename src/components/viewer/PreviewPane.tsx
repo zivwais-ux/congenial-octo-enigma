@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import { FileText, ImageOff } from 'lucide-react';
+import { Check, FileText, ImageOff } from 'lucide-react';
 import type { Comment, Pin, Version } from '../../types';
 import { useFileUrl } from '../../hooks/useFileUrl';
 import { isPdf } from '../ui/FileThumb';
@@ -16,6 +16,8 @@ const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.roun
 interface Props {
   version: Version;
   pins: NumberedPin[];
+  /** סימונים מהגרסה הקודמת, לאימות שהתיקונים בוצעו */
+  ghostPins?: NumberedPin[];
   activeId: string | null;
   onSelect: (commentId: string | null) => void;
   /** אם מוגדר – קליק על העבודה פותח הערה חדשה במיקום */
@@ -32,7 +34,7 @@ interface Props {
 }
 
 /** במת התצוגה: רקע כהה וניטרלי, כדי שהעבודה תהיה במרכז. תומכת בזום, גרירה וצביטה */
-export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showResolved, maxH, className = '', zoom = 1, onZoom, onActualSize }: Props) {
+export function PreviewPane({ version, pins, ghostPins = [], activeId, onSelect, onAddPin, showResolved, maxH, className = '', zoom = 1, onZoom, onActualSize }: Props) {
   const { url, missing } = useFileUrl(version.previewFileUrl);
   const pdf = isPdf(version);
   const [draft, setDraft] = useState<Pin | null>(null);
@@ -178,6 +180,30 @@ export function PreviewPane({ version, pins, activeId, onSelect, onAddPin, showR
             draggable={false}
           />
         )}
+        {ghostPins.map(({ comment, number }) => {
+          const active = comment.id === activeId;
+          return (
+            <button
+              key={comment.id}
+              type="button"
+              data-testid="ghost-pin"
+              data-fixed={comment.resolved}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDraft(null);
+                onSelect(active ? null : comment.id);
+              }}
+              style={{ left: `${comment.pin!.x}%`, top: `${comment.pin!.y}%` }}
+              className={`num absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[1.5px] border-dashed text-[11px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.35)] backdrop-blur-[2px] transition duration-150 ${
+                comment.resolved ? 'border-emerald-300 bg-stone-900/60 text-emerald-300' : 'border-signal-400 bg-stone-900/60 text-signal-200'
+              } ${active ? 'z-20 scale-[1.25] ring-2 ring-white/70' : 'hover:scale-110'}`}
+              title={`מגרסה קודמת${comment.resolved ? ' · טופל' : ' · פתוח'}: ${comment.text}`}
+              aria-label={`הערה ${number} מהגרסה הקודמת${comment.resolved ? ', טופלה' : ', פתוחה'}: ${comment.text}`}
+            >
+              {comment.resolved ? <Check className="h-3 w-3" strokeWidth={3} /> : number}
+            </button>
+          );
+        })}
         {visible.map(({ comment, number }) => {
           const active = comment.id === activeId;
           return (

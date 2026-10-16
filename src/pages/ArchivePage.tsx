@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCheck, ChevronDown, Download, FileArchive, FolderOpen, Layers, Search, SearchX, X } from 'lucide-react';
+import { CheckCheck, ChevronDown, Download, FileArchive, FolderOpen, Layers, ListChecks, Search, SearchX, X } from 'lucide-react';
 import { IconTile } from '../components/ui/IconTile';
 import type { Item } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { decidedAt } from '../lib/items';
+import { checksLabel } from '../lib/checks';
 import { formatDate } from '../lib/dates';
 import { downloadSource } from '../lib/download';
 import { demoItem } from '../lib/tour';
@@ -171,6 +172,7 @@ function ArchiveCard({ item }: { item: Item }) {
   const designer = userById.get(item.designerId);
   const latest = item.versions[item.versions.length - 1];
   const withSource = [...item.versions].reverse().find((v) => v.sourceFileName);
+  const checks = [...item.events].reverse().find((e) => e.type === 'decision' && e.status === 'approved')?.checks;
   return (
     <div className="group flex flex-col" data-testid="archive-card">
       <Link to={`/item/${item.id}`} className="relative block overflow-hidden rounded-lg border border-stone-200/80 bg-stone-100/70 transition group-hover:border-stone-300">
@@ -188,6 +190,12 @@ function ArchiveCard({ item }: { item: Item }) {
           <span className="text-stone-300">·</span>
           <span className="shrink-0">{formatDate(decidedAt(item))}</span>
         </div>
+        {checks && checks.length > 0 && (
+          <div className="mt-1 flex items-center gap-1 text-xs text-emerald-800" title="מה נבדק לפני האישור" data-testid="archive-checks">
+            <ListChecks className="h-3 w-3 shrink-0" />
+            <span className="truncate">נבדק: {checksLabel(checks)}</span>
+          </div>
+        )}
         {withSource ? (
           <button
             onClick={() => {

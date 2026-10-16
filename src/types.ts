@@ -15,6 +15,7 @@ import type {
   RoleSchema,
   StatusSchema,
   TourStateSchema,
+  BrandCheckSchema,
   UserSchema,
   VersionSchema,
 } from './schema';
@@ -33,4 +34,5 @@ export type Comment = z.infer<typeof CommentSchema>;
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
 export type Notification = z.infer<typeof NotificationSchema>;
 export type TourState = z.infer<typeof TourStateSchema>;
+export type BrandCheck = z.infer<typeof BrandCheckSchema>;
 export type AppState = z.infer<typeof AppStateSchema>;

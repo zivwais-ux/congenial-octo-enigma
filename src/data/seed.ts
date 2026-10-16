@@ -2,7 +2,7 @@ import type { AppState, Comment, Item, ItemEvent, Notification, Pin, Project, St
 import { placeholderDataUrl, type PlaceholderSpec } from './placeholders';
 import { USER_CHANNEL } from '../lib/status';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** מזהי עבודות הדמה – כל עבודה אחרת נוצרה במהלך ההדגמה */
 export const SEED_ITEM_IDS = new Set(['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12']);
@@ -347,6 +347,16 @@ export function createSeed(): AppState {
       events.push({ id: `${s.id}-e-${id}`, type: 'comment', authorId: c.author, at, versionNumber: c.v, text: c.text });
     });
 
+    // הערות שטופלו על גרסה קודמת נרשמות כ"תוקן" בגרסה שאחריה
+    versions.forEach((v, idx) => {
+      if (idx === 0) return;
+      const prev = versions[idx - 1].id;
+      const fixed = comments.filter((c) => c.itemId === s.id && c.versionId === prev && !c.parentId && c.resolved).map((c) => c.id);
+      if (fixed.length) v.fixes = fixed;
+    });
+    // אישורים קיימים: מה נבדק בצ'קליסט המותג
+    for (const e of events) if (e.type === 'decision' && e.status === 'approved') e.checks = s.sourceExt ? ['logo', 'colors', 'proofing', 'size'] : ['logo', 'colors', 'proofing'];
+
     events.sort((a, b) => a.at.localeCompare(b.at));
 
     items.push({
@@ -380,7 +390,7 @@ export function createSeed(): AppState {
 
   return {
     schema: SCHEMA_VERSION,
-    tour: { archiveSeen: false },
+    tour: { archiveSeen: false, welcomed: false },
     currentUserId: 'u1',
     users,
     projects,

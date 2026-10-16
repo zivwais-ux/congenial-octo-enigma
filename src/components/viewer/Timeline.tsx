@@ -1,9 +1,10 @@
-import { Check, Layers, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
+import { Check, Layers, ListChecks, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
 import type { Item, ItemEvent } from '../../types';
 import { IconTile } from '../ui/IconTile';
 import { useLookups } from '../../store/StoreProvider';
 import { formatDateTime } from '../../lib/dates';
 import { STATUS_META } from '../../lib/status';
+import { checksLabel } from '../../lib/checks';
 
 function title(e: ItemEvent) {
   switch (e.type) {
@@ -28,6 +29,10 @@ function icon(e: ItemEvent) {
 }
 
 /** יומן הפעילות של העבודה: מי עשה מה ומתי */
+function fixesOf(item: Item, versionNumber?: number) {
+  return versionNumber ? (item.versions[versionNumber - 1]?.fixes?.length ?? 0) : 0;
+}
+
 export function Timeline({ item }: { item: Item }) {
   const { userById } = useLookups();
   const events = [...item.events].reverse();
@@ -47,6 +52,18 @@ export function Timeline({ item }: { item: Item }) {
               </div>
               <div className="num mt-0.5 text-xs text-stone-400">{formatDateTime(e.at)}</div>
               {e.text && <p className="mt-1.5 text-sm leading-5 text-stone-600">{e.text}</p>}
+              {e.type === 'version' && fixesOf(item, e.versionNumber) > 0 && (
+                <div className="mt-1.5 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-800">
+                  <Check className="h-3 w-3" strokeWidth={2.5} />
+                  {fixesOf(item, e.versionNumber) === 1 ? 'הערה אחת טופלה' : `${fixesOf(item, e.versionNumber)} הערות טופלו`} בגרסה {e.versionNumber}
+                </div>
+              )}
+              {e.checks && e.checks.length > 0 && (
+                <div className="mt-1.5 inline-flex items-center gap-1 rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-700" data-testid="timeline-checks">
+                  <ListChecks className="h-3 w-3" />
+                  נבדק: {checksLabel(e.checks)}
+                </div>
+              )}
             </div>
           </li>
         );

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Activity, Check, ChevronDown, Clock3, Columns2, Download, Eye, EyeOff, Maximize2, MessageSquare, Minimize2, Minus, Plus, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
+import { Activity, Check, ChevronDown, Clock3, Columns2, Download, Eye, EyeOff, History, Maximize2, MessageSquare, Minimize2, Minus, Plus, RotateCcw, Upload, X, type LucideIcon } from 'lucide-react';
 import { MAX_ZOOM, MIN_ZOOM } from '../components/viewer/PreviewPane';
 import { isPdf } from '../components/ui/FileThumb';
 import { IconTile } from '../components/ui/IconTile';
 import { ProjectChip } from '../components/ui/ProjectChip';
 import type { Tone } from '../lib/status';
-import type { Item, Pin, User } from '../types';
+import type { BrandCheck, Item, Pin, User } from '../types';
 import { useLookups, useStore } from '../store/StoreProvider';
 import { addComment, decide, deleteComment, toggleResolved } from '../store/actions';
 import { useToast } from '../components/ui/Toast';
@@ -63,6 +63,7 @@ function ItemView({ item }: { item: Item }) {
   const [tab, setTab] = useState<'comments' | 'timeline'>('comments');
   const [showResolved, setShowResolved] = useState(false);
   const [showPins, setShowPins] = useState(true);
+  const [showGhosts, setShowGhosts] = useState(true);
   const [compare, setCompare] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -121,6 +122,14 @@ function ItemView({ item }: { item: Item }) {
   const openPins = pinned.filter((p) => !p.comment.resolved).length;
   const openCount = topLevel.filter((c) => !c.resolved).length;
   const olderCount = itemComments.filter((c) => c.versionId !== version.id).length;
+  // הערות הגרסה הקודמת: מוצגות כ"רפאים" על הגרסה הנוכחית, כדי לבדוק שתוקנו
+  const prevVersion = versionIdx > 0 ? item.versions[versionIdx - 1] : undefined;
+  const prevTop = prevVersion
+    ? itemComments.filter((c) => c.versionId === prevVersion.id && !c.parentId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    : [];
+  const prevPinned: NumberedPin[] = prevTop.filter((c) => c.pin).map((comment, i) => ({ comment, number: i + 1 }));
+  const prevNumber = new Map(prevPinned.map((x) => [x.comment.id, x.number]));
+  const previous = prevVersion && prevTop.length ? { versionNumber: prevVersion.number, comments: prevTop.map((comment) => ({ comment, number: prevNumber.get(comment.id) })) } : undefined;
 
   const isApprover = currentUser.id === item.approverId;
   const isDesigner = currentUser.id === item.designerId;
@@ -140,8 +149,8 @@ function ItemView({ item }: { item: Item }) {
     setTab('comments');
   };
 
-  const onDecide = (d: Decision, text: string) => {
-    const undo = updateUndoable((s) => decide(s, item.id, d, text));
+  const onDecide = (d: Decision, text: string, checks?: BrandCheck[]) => {
+    const undo = updateUndoable((s) => decide(s, item.id, d, text, checks));
     setDecided(d);
     recordDecision(d);
     const msg = { approved: 'העבודה אושרה ועברה לארכיון', changes: `בקשת התיקונים נשלחה ל${designer.name}`, rejected: 'העבודה נדחתה' }[d];
@@ -299,6 +308,17 @@ function ItemView({ item }: { item: Item }) {
                       <span className="hidden sm:inline">סימונים</span>
                     </button>
                   )}
+                  {prevPinned.length > 0 && (
+                    <button
+                      onClick={() => setShowGhosts((v) => !v)}
+                      className={`${toolBtn} ${showGhosts ? 'text-stone-400 hover:bg-white/[0.06] hover:text-white' : 'bg-white/[0.12] text-white'}`}
+                      title={showGhosts ? `הסתרת ההערות מגרסה ${prevVersion!.number}` : `הצגת ההערות מגרסה ${prevVersion!.number}`}
+                      data-testid="ghost-toggle"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">מגרסה {prevVersion!.number}</span>
+                    </button>
+                  )}
                   {item.versions.length > 1 && (
                     <button onClick={() => setCompare(true)} className={`${toolBtn} text-stone-400 hover:bg-white/[0.06] hover:text-white`} data-testid="compare-toggle">
                       <Columns2 className="h-3.5 w-3.5" />
@@ -317,6 +337,7 @@ function ItemView({ item }: { item: Item }) {
                   <PreviewPane
                     version={version}
                     pins={showPins ? pinned : []}
+                    ghostPins={showGhosts ? prevPinned : []}
                     activeId={activeId}
                     onSelect={setActiveId}
                     onAddPin={canPin ? onAddPin : undefined}
@@ -394,6 +415,7 @@ function ItemView({ item }: { item: Item }) {
             showResolved={showResolved}
             onShowResolved={setShowResolved}
             olderCount={olderCount}
+            previous={previous}
             canPin={canPin}
           />
         ) : (
