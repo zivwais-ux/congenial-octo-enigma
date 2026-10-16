@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import { BellRing, Check, ChevronsUpDown, RotateCcw } from 'lucide-react';
 import { useStore } from '../../store/StoreProvider';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useSwitchUser } from '../../hooks/useSwitchUser';
 import { useToast } from '../ui/Toast';
 import { Avatar } from '../ui/Avatar';
+import { useUI } from './UIContext';
 import type { Role } from '../../types';
 
 const ROLE_LABEL: Record<Role, string> = { approver: 'מאשרים', designer: 'מעצבים' };
@@ -20,6 +21,7 @@ export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'c
   const switchUser = useSwitchUser();
   const toast = useToast();
   const navigate = useNavigate();
+  const { deliveryPreviews, setDeliveryPreviews } = useUI();
 
   const waitingFor = (userId: string, role: Role) =>
     state.items.filter((i) => (role === 'approver' ? i.approverId === userId && i.status === 'pending' : i.designerId === userId && i.status === 'changes'))
@@ -110,6 +112,19 @@ export function UserSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' | 'c
               </div>
             ))}
           </div>
+          <button
+            role="menuitemcheckbox"
+            aria-checked={deliveryPreviews}
+            onClick={() => setDeliveryPreviews(!deliveryPreviews)}
+            className="flex w-full items-center gap-2 border-t border-stone-100 px-3.5 py-2.5 text-start text-sm text-stone-600 transition hover:bg-stone-50 hover:text-ink"
+            data-testid="toggle-delivery-previews"
+          >
+            <BellRing className="h-3.5 w-3.5" />
+            <span className="flex-1">תצוגה מקדימה של התראות</span>
+            <span className={`relative h-4 w-7 rounded-full transition ${deliveryPreviews ? 'bg-ink' : 'bg-stone-300'}`}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-xs transition-all ${deliveryPreviews ? 'start-3.5' : 'start-0.5'}`} />
+            </span>
+          </button>
           <button onClick={onReset} className="flex w-full items-center gap-2 border-t border-stone-100 px-3.5 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50 hover:text-ink">
             <RotateCcw className="h-3.5 w-3.5" />
             איפוס ההדגמה

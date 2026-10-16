@@ -11,16 +11,9 @@ import { Avatar } from '../ui/Avatar';
 import { ChannelTag } from '../ui/ChannelTag';
 import { FileThumb } from '../ui/FileThumb';
 import { LogoMark } from './Logo';
+import { NOTIFICATION_LABEL } from '../../lib/notifications';
 
-const KIND: Record<Notification['kind'], string> = {
-  new: 'שליחה לאישור',
-  version: 'גרסה חדשה',
-  changes: 'בקשת תיקונים',
-  approved: 'אישור',
-  rejected: 'דחייה',
-  overdue: 'תזכורת דדליין',
-  reply: 'תגובה להערה שלך',
-};
+const KIND = NOTIFICATION_LABEL;
 
 const KIND_TONE: Record<Notification['kind'], string> = {
   new: 'text-sky-700',

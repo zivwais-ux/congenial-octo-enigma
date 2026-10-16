@@ -5,6 +5,7 @@ import { TopBar } from './TopBar';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
 import { DemoGuide } from './DemoGuide';
+import { DeliveryPreview } from './DeliveryPreview';
 import { useUI } from './UIContext';
 import { useStore } from '../../store/StoreProvider';
 import { useToast } from '../ui/Toast';
@@ -54,6 +55,7 @@ export function AppShell() {
       {!onItem && <MobileNav />}
       <CommandPalette />
       <DemoGuide />
+      <DeliveryPreview />
     </div>
   );
 }
