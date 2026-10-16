@@ -6,6 +6,7 @@ import { useLookups, useStore } from '../store/StoreProvider';
 import { applyFilters, EMPTY_FILTERS, ItemFilters, type Filters, type View } from '../components/items/ItemFilters';
 import { ItemCard, useItemMeta } from '../components/items/ItemCard';
 import { ItemList } from '../components/items/ItemRow';
+import { ItemBoard } from '../components/items/ItemBoard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useLocalPref } from '../hooks/useLocalPref';
 import { daysUntil, dueLabel, urgency } from '../lib/dates';
@@ -88,27 +89,33 @@ function ApproverDashboard() {
       <div>
         <ItemFilters value={filters} onChange={setFilters} counts={countByStatus(state.items)} view={view} onView={setView} />
 
-        <Section title="מחכה להחלטה שלך" count={fWaiting.length} icon={Inbox} tone="sky" hint="ממוין לפי דדליין">
-          {fWaiting.length ? (
-            <Items items={fWaiting} view={view} />
-          ) : (
-            <EmptyState
-              icon={<IconTile icon={waiting.length ? SearchX : PartyPopper} tone={waiting.length ? 'stone' : 'emerald'} size="lg" />}
-              title={waiting.length ? 'אין התאמות לסינון' : 'התור ריק, כל הכבוד'}
-              text={waiting.length ? 'נסו לנקות את הסינון.' : 'כשמעצב ישלח לך עבודה, היא תופיע כאן ותישלח אליך התראה.'}
-            />
-          )}
-        </Section>
+        {view === 'board' ? (
+          <ItemBoard items={applyFilters(state.items, filters, lookups)} />
+        ) : (
+          <>
+            <Section title="מחכה להחלטה שלך" count={fWaiting.length} icon={Inbox} tone="sky" hint="ממוין לפי דדליין">
+              {fWaiting.length ? (
+                <Items items={fWaiting} view={view} />
+              ) : (
+                <EmptyState
+                  icon={<IconTile icon={waiting.length ? SearchX : PartyPopper} tone={waiting.length ? 'stone' : 'emerald'} size="lg" />}
+                  title={waiting.length ? 'אין התאמות לסינון' : 'התור ריק, כל הכבוד'}
+                  text={waiting.length ? 'נסו לנקות את הסינון.' : 'כשמעצב ישלח לך עבודה, היא תופיע כאן ותישלח אליך התראה.'}
+                />
+              )}
+            </Section>
 
-        {fWithDesigners.length > 0 && (
-          <Section title="אצל המעצבים לתיקונים" count={fWithDesigners.length} icon={RotateCcw} tone="amber" hint="מחכות לגרסה חדשה">
-            <Items items={fWithDesigners} view={view} />
-          </Section>
+            {fWithDesigners.length > 0 && (
+              <Section title="אצל המעצבים לתיקונים" count={fWithDesigners.length} icon={RotateCcw} tone="amber" hint="מחכות לגרסה חדשה">
+                <Items items={fWithDesigners} view={view} />
+              </Section>
+            )}
+
+            <Section title="כל העבודות במחלקה" count={fOthers.length} icon={Send} tone="stone">
+              {fOthers.length ? <Items items={fOthers} view={view} /> : <EmptyState icon={<IconTile icon={SearchX} size="lg" />} title="לא נמצאו עבודות" text="נסו לשנות את הסינון." />}
+            </Section>
+          </>
         )}
-
-        <Section title="כל העבודות במחלקה" count={fOthers.length} icon={Send} tone="stone">
-          {fOthers.length ? <Items items={fOthers} view={view} /> : <EmptyState icon={<IconTile icon={SearchX} size="lg" />} title="לא נמצאו עבודות" text="נסו לשנות את הסינון." />}
-        </Section>
       </div>
     </Page>
   );
@@ -187,22 +194,24 @@ function DesignerDashboard() {
           </div>
         )}
 
-        {DESIGNER_GROUPS.map((g) => {
-          const list = filtered.filter((i) => i.status === g.status).sort(g.status === 'approved' ? byRecent : byDue);
-          if (!list.length) return null;
-          const shown = g.status === 'approved' ? list.slice(0, 4) : list;
-          return (
-            <Section key={g.status} title={g.title} count={list.length} icon={g.icon} tone={g.tone} hint={g.hint}>
-              <Items items={shown} view={view} show="approver" />
-              {list.length > shown.length && (
-                <Link to="/archive" className="mt-3 inline-flex items-center gap-1 text-sm text-stone-500 transition hover:text-ink">
-                  לכל העבודות שאושרו
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                </Link>
-              )}
-            </Section>
-          );
-        })}
+        {view === 'board'
+          ? filtered.length > 0 && <ItemBoard items={filtered} />
+          : DESIGNER_GROUPS.map((g) => {
+            const list = filtered.filter((i) => i.status === g.status).sort(g.status === 'approved' ? byRecent : byDue);
+            if (!list.length) return null;
+            const shown = g.status === 'approved' ? list.slice(0, 4) : list;
+            return (
+              <Section key={g.status} title={g.title} count={list.length} icon={g.icon} tone={g.tone} hint={g.hint}>
+                <Items items={shown} view={view} show="approver" />
+                {list.length > shown.length && (
+                  <Link to="/archive" className="mt-3 inline-flex items-center gap-1 text-sm text-stone-500 transition hover:text-ink">
+                    לכל העבודות שאושרו
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </Section>
+            );
+          })}
       </div>
     </Page>
   );

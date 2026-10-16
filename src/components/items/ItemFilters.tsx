@@ -1,4 +1,4 @@
-import { LayoutGrid, Rows3, Search, X } from 'lucide-react';
+import { Columns3, LayoutGrid, Rows3, Search, X } from 'lucide-react';
 import type { Item, Status } from '../../types';
 import { STATUS_META, STATUS_ORDER } from '../../lib/status';
 import { useLookups, useStore } from '../../store/StoreProvider';
@@ -11,7 +11,7 @@ export interface Filters {
 
 export const EMPTY_FILTERS: Filters = { q: '', status: 'all', projectId: 'all' };
 
-export type View = 'grid' | 'list';
+export type View = 'grid' | 'list' | 'board';
 
 export function applyFilters(items: Item[], f: Filters, lookups: ReturnType<typeof useLookups>) {
   const q = f.q.trim();
@@ -86,6 +86,7 @@ export function ItemFilters({
             [
               ['list', Rows3, 'טבלה'],
               ['grid', LayoutGrid, 'תמונות'],
+              ['board', Columns3, 'לוח לפי שלב'],
             ] as const
           ).map(([v, Icon, label]) => (
             <button
@@ -93,6 +94,7 @@ export function ItemFilters({
               onClick={() => onView(v)}
               aria-pressed={view === v}
               title={label}
+              data-testid={`view-${v}`}
               className={`flex h-6 w-7 items-center justify-center rounded-[4px] transition ${view === v ? 'bg-stone-100 text-ink' : 'text-stone-400 hover:text-ink'}`}
             >
               <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
